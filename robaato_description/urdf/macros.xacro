@@ -1,0 +1,104 @@
+<?xml version="1.0"?>
+
+<robot name="robaato" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="cylinder_inertia" params="m r h">
+    <inertia
+      ixx="${m*(3*r*r+h*h)/12}"
+      ixy = "0"
+      ixz = "0"
+      iyy="${m*(3*r*r+h*h)/12}"
+      iyz = "0"
+      izz="${m*r*r/2}"
+    />
+  </xacro:macro>
+
+  <xacro:macro name="box_inertia" params="m x y z">
+    <inertia
+      ixx="${m*(y*y+z*z)/12}"
+      ixy = "0"
+      ixz = "0"
+      iyy="${m*(x*x+z*z)/12}"
+      iyz = "0"
+      izz="${m*(x*x+y*y)/12}"
+    />
+  </xacro:macro>
+
+  <xacro:macro name="sphere_inertia" params="m r">
+    <inertia
+      ixx="${2*m*r*r/5}"
+      ixy = "0"
+      ixz = "0"
+      iyy="${2*m*r*r/5}"
+      iyz = "0"
+      izz="${2*m*r*r/5}"
+    />
+  </xacro:macro>
+
+  <xacro:macro name="tof_sensor" params="tof_number pos_x pos_y pos_z ang_r ang_p ang_y">
+
+    <link name="tof_${tof_number}_link">
+      <inertial>
+        <origin xyz="${-tof_x/2} 0 ${tof_z/2-tof_h}" rpy="0 0 0"/>
+        <mass value="${tof_w}"/>
+        <xacro:box_inertia
+          m="${tof_w}"
+          x="${tof_x}"
+          y="${tof_y}"
+          z="${tof_z}"
+        />
+      </inertial>
+
+      <visual>
+        <origin xyz="${-tof_x/2} 0 ${tof_z/2-tof_h}" rpy="0 0 0"/>
+        <geometry>
+          <box size="${tof_x} ${tof_y} ${tof_z}"/>
+        </geometry>
+        <material name="blue3"/>
+      </visual>
+
+      <collision>
+        <origin xyz="${-tof_x/2} 0 ${tof_z/2-tof_h}" rpy="0 0 0"/>
+        <geometry>
+          <box size="${tof_x} ${tof_y} ${tof_z}"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="tof_${tof_number}_joint" type="fixed">
+      <origin xyz="${pos_x+tof_x/2} ${pos_y} ${pos_z+chassis_z/2+tof_h}" rpy="${ang_r} ${ang_p} ${ang_y}"/>
+      <parent link="chassis"/>
+      <child link="tof_${tof_number}_link"/>
+    </joint>
+
+    <gazebo reference="tof_${tof_number}_link">
+      <sensor type="ray" name="tof_${tof_number}">
+        <pose>0 0 0 0 0 0</pose>
+        <ray>
+          <scan>
+            <horizontal>
+              <samples>2</samples>
+              <resolution>1</resolution>
+              <min_angle>${-tof_scan_angle}</min_angle>
+              <max_angle>${tof_scan_angle}</max_angle>
+            </horizontal>
+          </scan>
+          <range>
+            <min>${tof_dist_min}</min>
+            <max>${tof_dist_max}</max>
+            <resolution>${tof_linear_res}</resolution>
+          </range>
+        </ray>
+        <plugin name="laser" filename="libgazebo_ros_laser.so">
+          <topicName>tof_${tof_number}/scan</topicName>
+          <frameName>tof_${tof_number}_link</frameName>
+        </plugin>
+        <alwaysOn>1</alwaysOn>
+        <update_rate>${sensor_update_rate}</update_rate>
+        <visualize>true</visualize>
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>

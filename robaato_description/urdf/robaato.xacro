@@ -1,0 +1,184 @@
+<?xml version="1.0"?>
+
+<robot name="robaato" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find robaato_description)/urdf/robaato.gazebo"/>
+  <xacro:include filename="$(find robaato_description)/urdf/materials.xacro"/>
+  <xacro:include filename="$(find robaato_description)/urdf/macros.xacro"/>
+  <xacro:include filename="$(find robaato_description)/urdf/properties.xacro"/>
+
+  <link name="chassis">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="${chassis_w}"/>
+      <xacro:box_inertia
+        m="${chassis_w}"
+        x="${chassis_x}"
+        y="${chassis_y}"
+        z="${chassis_z}"
+      />
+    </inertial>
+
+    <visual name="chassis_visual">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${chassis_x} ${chassis_y} ${chassis_z}"/>
+      </geometry>
+      <material name="blue2"/>
+    </visual>
+
+    <collision name="chassis_collision">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${chassis_x} ${chassis_y} ${chassis_z}"/>
+      </geometry>
+    </collision>
+
+    <visual name="caster_visual">
+      <origin xyz="${chassis_x/4} 0 ${-chassis_z/2}" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="${caster_r}"/>
+      </geometry>
+      <material name="blue2"/>
+    </visual>
+
+    <collision name="caster_collision">
+      <origin xyz="${chassis_x/4} 0 ${-chassis_z/2}" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="${caster_r}"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="left_wheel_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="${PI/2} 0 0"/>
+      <mass value="${wheel_w}"/>
+      <xacro:cylinder_inertia
+        m="${wheel_w}"
+        r="${wheel_r}"
+        h="${wheel_d}"
+      />
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="${PI/2} 0 0"/>
+      <geometry>
+        <cylinder radius="${wheel_r}" length="${wheel_d}"/>
+      </geometry>
+      <material name="blue1"/>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0" rpy="${PI/2} 0 0"/>
+      <geometry>
+        <cylinder radius="${wheel_r}" length="${wheel_d}"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="right_wheel_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="${PI/2} 0 0"/>
+      <mass value="${wheel_w}"/>
+      <xacro:cylinder_inertia
+        m="${wheel_w}"
+        r="${wheel_r}"
+        h="${wheel_d}"
+      />
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="${PI/2} 0 0"/>
+      <geometry>
+        <cylinder radius="${wheel_r}" length="${wheel_d}"/>
+      </geometry>
+      <material name="blue1"/>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0" rpy="${PI/2} 0 0"/>
+      <geometry>
+        <cylinder radius="${wheel_r}" length="${wheel_d}"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_wheel_joint" type="continuous">
+    <origin xyz="${-chassis_x/2+wheel_dx} ${chassis_y/2+wheel_dy+wheel_d/2} ${-chassis_z/2+wheel_dz}" rpy="0 0 0"/>
+    <parent link="chassis"/>
+    <child link="left_wheel_link"/>
+    <axis xyz="0 1 0" rpy="0 0 0"/>
+    <limit effort="100" velocity="100"/>
+    <joint_properties damping="0" friction="0"/>
+  </joint>
+
+  <joint name="right_wheel_joint" type="continuous">
+    <origin xyz="${-chassis_x/2+wheel_dx} ${-chassis_y/2-wheel_dy-wheel_d/2} ${-chassis_z/2+wheel_dz}" rpy="0 0 0"/>
+    <parent link="chassis"/>
+    <child link="right_wheel_link"/>
+    <axis xyz="0 1 0" rpy="0 0 0"/>
+    <joint_properties damping="0" friction="0"/>
+  </joint>
+
+  <xacro:tof_sensor
+    tof_number="a"
+    pos_x="${chassis_x*0.4}"
+    pos_y="0"
+    pos_z="0"
+    ang_r="0"
+    ang_p="0"
+    ang_y="0"
+  />
+
+  <xacro:tof_sensor
+    tof_number="b"
+    pos_x="${chassis_x*0.35}"
+    pos_y="${chassis_y*0.35}"
+    pos_z="0"
+    ang_r="0"
+    ang_p="0"
+    ang_y="${PI/6}"
+  />
+
+  <xacro:tof_sensor
+    tof_number="c"
+    pos_x="${chassis_x*0.35}"
+    pos_y="${-chassis_y*0.35}"
+    pos_z="0"
+    ang_r="0"
+    ang_p="0"
+    ang_y="${-PI/6}"
+  />
+
+  <xacro:tof_sensor
+    tof_number="d"
+    pos_x="${-chassis_x*0.2}"
+    pos_y="${chassis_y*0.35}"
+    pos_z="0"
+    ang_r="0"
+    ang_p="0"
+    ang_y="${2*PI/3}"
+  />
+
+  <xacro:tof_sensor
+    tof_number="e"
+    pos_x="${-chassis_x*0.2}"
+    pos_y="${-chassis_y*0.35}"
+    pos_z="0"
+    ang_r="0"
+    ang_p="0"
+    ang_y="${-2*PI/3}"
+  />
+
+  <xacro:tof_sensor
+    tof_number="f"
+    pos_x="${-chassis_x*0.4}"
+    pos_y="0"
+    pos_z="0"
+    ang_r="0"
+    ang_p="0"
+    ang_y="${PI}"
+  />
+
+</robot>
