@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(robaato_controller)
+project(robaato)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -106,7 +106,7 @@ find_package( OpenCV REQUIRED )
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES robaato_controller
+#  LIBRARIES robaato
   CATKIN_DEPENDS roscpp std_msgs
 #  DEPENDS system_lib
 )
@@ -139,7 +139,7 @@ target_include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/robaato_controller.cpp
+#   src/${PROJECT_NAME}/robaato.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -211,7 +211,7 @@ target_link_libraries(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_robaato_controller.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_robaato.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
