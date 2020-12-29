@@ -7,6 +7,17 @@
   <xacro:include filename="$(find robaato_description)/urdf/macros.xacro"/>
   <xacro:include filename="$(find robaato_description)/urdf/properties.xacro"/>
 
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.0"/>
+      <xacro:sphere_inertia
+        m="0.0"
+        r="0.1"
+      />
+    </inertial>
+  </link>
+
   <link name="chassis">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -104,6 +115,13 @@
     </collision>
   </link>
 
+  <joint name="chassis_joint" type="fixed">
+    <origin xyz="${chassis_x/2-wheel_dx} 0 ${chassis_z/2-wheel_dz}" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="chassis"/>
+    
+  </joint>
+
   <joint name="left_wheel_joint" type="continuous">
     <origin xyz="${-chassis_x/2+wheel_dx} ${chassis_y/2+wheel_dy+wheel_d/2} ${-chassis_z/2+wheel_dz}" rpy="0 0 0"/>
     <parent link="chassis"/>
@@ -122,7 +140,7 @@
   </joint>
 
   <xacro:tof_sensor
-    tof_number="a"
+    tof_name="fm"
     pos_x="${chassis_x*0.4}"
     pos_y="0"
     pos_z="0"
@@ -132,7 +150,7 @@
   />
 
   <xacro:tof_sensor
-    tof_number="b"
+    tof_name="fl"
     pos_x="${chassis_x*0.35}"
     pos_y="${chassis_y*0.35}"
     pos_z="0"
@@ -142,7 +160,7 @@
   />
 
   <xacro:tof_sensor
-    tof_number="c"
+    tof_name="fr"
     pos_x="${chassis_x*0.35}"
     pos_y="${-chassis_y*0.35}"
     pos_z="0"
@@ -152,7 +170,7 @@
   />
 
   <xacro:tof_sensor
-    tof_number="d"
+    tof_name="sl"
     pos_x="${-chassis_x*0.2}"
     pos_y="${chassis_y*0.35}"
     pos_z="0"
@@ -162,7 +180,7 @@
   />
 
   <xacro:tof_sensor
-    tof_number="e"
+    tof_name="sr"
     pos_x="${-chassis_x*0.2}"
     pos_y="${-chassis_y*0.35}"
     pos_z="0"
@@ -172,7 +190,7 @@
   />
 
   <xacro:tof_sensor
-    tof_number="f"
+    tof_name="bm"
     pos_x="${-chassis_x*0.4}"
     pos_y="0"
     pos_z="0"

@@ -35,9 +35,9 @@
     />
   </xacro:macro>
 
-  <xacro:macro name="tof_sensor" params="tof_number pos_x pos_y pos_z ang_r ang_p ang_y">
+  <xacro:macro name="tof_sensor" params="tof_name pos_x pos_y pos_z ang_r ang_p ang_y">
 
-    <link name="tof_${tof_number}_link">
+    <link name="tof_${tof_name}_link">
       <inertial>
         <origin xyz="${-tof_x/2} 0 ${tof_z/2-tof_h}" rpy="0 0 0"/>
         <mass value="${tof_w}"/>
@@ -65,14 +65,14 @@
       </collision>
     </link>
 
-    <joint name="tof_${tof_number}_joint" type="fixed">
+    <joint name="tof_${tof_name}_joint" type="fixed">
       <origin xyz="${pos_x+tof_x/2} ${pos_y} ${pos_z+chassis_z/2+tof_h}" rpy="${ang_r} ${ang_p} ${ang_y}"/>
       <parent link="chassis"/>
-      <child link="tof_${tof_number}_link"/>
+      <child link="tof_${tof_name}_link"/>
     </joint>
 
-    <gazebo reference="tof_${tof_number}_link">
-      <sensor type="ray" name="tof_${tof_number}">
+    <gazebo reference="tof_${tof_name}_link">
+      <sensor type="ray" name="tof_${tof_name}">
         <pose>0 0 0 0 0 0</pose>
         <ray>
           <scan>
@@ -90,8 +90,8 @@
           </range>
         </ray>
         <plugin name="laser" filename="libgazebo_ros_laser.so">
-          <topicName>tof_${tof_number}/scan</topicName>
-          <frameName>tof_${tof_number}_link</frameName>
+          <topicName>tof_${tof_name}/scan</topicName>
+          <frameName>tof_${tof_name}_link</frameName>
         </plugin>
         <alwaysOn>1</alwaysOn>
         <update_rate>${sensor_update_rate}</update_rate>
