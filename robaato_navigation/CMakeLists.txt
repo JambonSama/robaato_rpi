@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(robaato)
+project(robaato_navigation)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -8,14 +8,9 @@ project(robaato)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-    geometry_msgs
-    move_base
-    roscpp
-    std_msgs
-    tf
+  move_base
+  robaato
 )
-
-find_package( OpenCV REQUIRED )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -108,8 +103,8 @@ find_package( OpenCV REQUIRED )
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES robaato
-  CATKIN_DEPENDS roscpp std_msgs
+#  LIBRARIES robaato_navigation
+#  CATKIN_DEPENDS move_base robaato
 #  DEPENDS system_lib
 )
 
@@ -117,39 +112,27 @@ catkin_package(
 ## Build ##
 ###########
 
-## Declare a C++ executable
-## With catkin_make all packages are built within a single CMake context
-## The recommended prefix ensures that target names across packages don't collide
-add_executable(
-    robaato
-    src/camera_worker.h
-    src/camera_worker.cpp
-    src/controller.h
-    src/controller.cpp
-    src/main.cpp
-    src/message.h
-    src/panoramic_camera_worker.h
-    src/panoramic_camera_worker.cpp
-    src/serial_port_worker.h
-    src/serial_port_worker.cpp)
-
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-target_include_directories(
-    robaato
-    PUBLIC
-    ${catkin_INCLUDE_DIRS}
-    ${OpenCV_INCLUDE_DIRS})
+include_directories(
+# include
+  ${catkin_INCLUDE_DIRS}
+)
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/robaato.cpp
+#   src/${PROJECT_NAME}/robaato_navigation.cpp
 # )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+## Declare a C++ executable
+## With catkin_make all packages are built within a single CMake context
+## The recommended prefix ensures that target names across packages don't collide
+# add_executable(${PROJECT_NAME}_node src/robaato_navigation_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -162,11 +145,9 @@ target_include_directories(
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(
-    robaato
-    pthread
-    ${OpenCV_LIBS}
-    ${catkin_LIBRARIES})
+# target_link_libraries(${PROJECT_NAME}_node
+#   ${catkin_LIBRARIES}
+# )
 
 #############
 ## Install ##
@@ -215,7 +196,7 @@ target_link_libraries(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_robaato.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_robaato_navigation.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

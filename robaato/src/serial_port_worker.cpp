@@ -139,6 +139,21 @@ void SerialPortWorker::ReadWriteSerialPort() {
             return;
         }
 
+        std::cout << "ax " << sensor_message_.ax << std::endl
+        << "ax " << sensor_message_.ax << std::endl
+        << "ay " << sensor_message_.ay << std::endl
+        << "az " << sensor_message_.az << std::endl
+        << "yaw " << sensor_message_.yaw << std::endl
+        << "pitch " << sensor_message_.pitch << std::endl
+        << "roll " << sensor_message_.roll << std::endl
+        << "tof 0 " << sensor_message_.tof_sensors[0] << std::endl
+        << "tof 1 " << sensor_message_.tof_sensors[1] << std::endl
+        << "tof 2 " << sensor_message_.tof_sensors[2] << std::endl
+        << "tof 3 " << sensor_message_.tof_sensors[3] << std::endl
+        << "tof 4 " << sensor_message_.tof_sensors[4] << std::endl
+        << "tof 5 " << sensor_message_.tof_sensors[5] << std::endl
+        << "bottle sensor " << sensor_message_.bottle_sensor << "\n" << std::endl;
+
         for (uint8_t i=0; i<TOF_SENSOR_NUM; ++i){
             // header
             tof_range[i].header.stamp = ros::Time::now();
@@ -201,7 +216,6 @@ void SerialPortWorker::ReadWriteSerialPort() {
 
         //publish the message
         odom_publisher.publish(odom);
-
     }
 
     // write to serial port

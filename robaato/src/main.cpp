@@ -5,6 +5,7 @@
 #include <ros/ros.h>
 
 // project headers
+#include "controller.h"
 #include "panoramic_camera_worker.h"
 #include "serial_port_worker.h"
 
@@ -15,10 +16,12 @@ int main(int argc, char** argv) {
     // objects inits
     CameraWorker *rpi_cam = new PanoramicCameraWorker(0);
     SerialPortWorker *serial_port = new SerialPortWorker();
+    Controller *controller = new Controller();
 
     // thread starts
     rpi_cam->Start();
     serial_port->Start();
+    controller->Start();
 
     // get out of program
     std::cin.ignore();
@@ -26,6 +29,7 @@ int main(int argc, char** argv) {
     // object destruction
     delete rpi_cam;
     delete serial_port;
+    delete controller;
 
     return 0;
 }
