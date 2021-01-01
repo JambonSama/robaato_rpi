@@ -107,9 +107,9 @@ void SerialPortWorker::ReadWriteSerialPort() {
 
     for (uint8_t i=0; i<tof_sensor_number; ++i){
         // publisher
-        tof_publisher[i] = node_handle_.advertise<sensor_msgs::Range>(link_names[i]+link_suffix, queue_size);
+        tof_publisher[i] = node_handle_.advertise<sensor_msgs::Range>(link_names[i]+frame_suffix, queue_size);
         // header
-        tof_range[i].header.frame_id = link_names[i]+frame_suffix;
+        tof_range[i].header.frame_id = link_names[i]+link_suffix;
         // rest of message
         tof_range[i].radiation_type = sensor_msgs::Range::ULTRASOUND;
         tof_range[i].field_of_view = 0.5235987755982989; // 30 deg = 0.52 rad
@@ -176,6 +176,8 @@ void SerialPortWorker::ReadWriteSerialPort() {
             tof_range[i].header.stamp = ros::Time::now();
             // rest of message
             tof_range[i].range = sensor_message_.tof_sensors[i];
+            // publication
+            tof_publisher[i].publish(tof_range[i]);
         }
 
         double omega_r = (control_message_.left_wheel_speed)*(control_message_.left_wheel_direction?1:-1)*M_PI/30;

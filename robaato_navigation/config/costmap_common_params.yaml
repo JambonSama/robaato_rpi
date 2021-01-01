@@ -1,5 +1,6 @@
 #obstacle_range: 2.5 # maximum range sensor reading that will result in an obstacle being put into costmap
 footprint: [[0.3575, 0.0135], [0.3275, 0.157], [0.3115, 0.222],[0.2695, 0.222], [-0.035, 0.199], [-0.0525, 0.157], [-0.0525, -0.157], [-0.035, -0.199], [0.2695, -0.222], [0.3115, -0.222], [0.3275, -0.157], [0.3575, -0.0135]]
+transform_tolerance: 3
 
 plugins:
   - {name: static_layer,    type: "costmap_2d::StaticLayer"}
@@ -7,11 +8,12 @@ plugins:
   - {name: inflation_layer, type: "costmap_2d::InflationLayer"}
 
 range_layer:
-  topics: ["fm_tof", "fr_tof", "fl_tof", "sr_tof", "sl_tof", "bm_tof"]
+  topics: ["tof_fm_link", "tof_fr_link", "tof_fl_link", "tof_sr_link", "tof_sl_link", "tof_bm_link"]
   no_readings_timeout: 0
   clear_threshold: 0.2
   mark_threshold: 0.8
   clear_on_max_reading: false
+  ns: "/"
 
 inflation_layer:
   enabled:             true
