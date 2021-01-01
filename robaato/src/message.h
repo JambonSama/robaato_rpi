@@ -22,4 +22,5 @@ struct __attribute__((__packed__)) SensorMessage {
     float roll = 0;
     float tof_sensors[TOF_SENSOR_NUM] = {0, 0, 0, 0, 0, 0}; // FM FR FL SR SL BM
     bool bottle_sensor = 0; //(=0: No bottle detected) (=1: bottle detected)
+    bool roller_encoder_state = 0;          //(=0: Roller is off) (=1: roller is on)
 };

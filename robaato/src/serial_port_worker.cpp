@@ -13,6 +13,8 @@
 #include <termios.h> // contains POSIX terminal control definitions
 #include <unistd.h>  // write(), read(), close()
 
+using namespace std::chrono_literals;
+
 namespace {
 // queue size for published values
 const uint32_t queue_size = 50;
@@ -26,6 +28,12 @@ const std::string frame_suffix = "_frame";
 // robot dimensions
 const double R = 0.0350;
 const double L = 0.31400+2*0.00850+0.0240;
+
+// motor command
+double leftMotorCommand;
+double rightMotorCommand;
+
+std::mutex mu_command;
 }
 
 SerialPortWorker::SerialPortWorker() {}
@@ -39,6 +47,11 @@ SerialPortWorker::~SerialPortWorker() {
         th_read_write_serial_port_.join();
     }
     std::cout << "spw destructor read/write serial port" << std::endl; /// temp
+
+    if (th_get_command_.joinable()) {
+        th_get_command_.join();
+    }
+    std::cout << "spw destructor get command" << std::endl; /// temp
 }
 
 void SerialPortWorker::ReadWriteSerialPort() {
@@ -116,12 +129,15 @@ void SerialPortWorker::ReadWriteSerialPort() {
     last_time = ros::Time::now();
 
     while (!stop_) {
+
         // write to serial port
         control_message_.gate_position = false;
-        control_message_.left_wheel_direction = true;
-        control_message_.right_wheel_direction = false;
-        control_message_.left_wheel_speed = 2000;
-        control_message_.right_wheel_speed = 2000;
+        mu_command.lock();
+        control_message_.left_wheel_direction = leftMotorCommand>0;
+        control_message_.right_wheel_direction = rightMotorCommand>0;
+        control_message_.left_wheel_speed = std::fabs(leftMotorCommand);
+        control_message_.right_wheel_speed = std::fabs(rightMotorCommand);
+        mu_command.unlock();
         control_message_.roller_state = 0;
 
         write(serial_port, (char *)&control_message_, sizeof(control_message_));
@@ -139,20 +155,21 @@ void SerialPortWorker::ReadWriteSerialPort() {
             return;
         }
 
-        std::cout << "ax " << sensor_message_.ax << std::endl
+        std::cout 
         << "ax " << sensor_message_.ax << std::endl
         << "ay " << sensor_message_.ay << std::endl
         << "az " << sensor_message_.az << std::endl
         << "yaw " << sensor_message_.yaw << std::endl
         << "pitch " << sensor_message_.pitch << std::endl
         << "roll " << sensor_message_.roll << std::endl
-        << "tof 0 " << sensor_message_.tof_sensors[0] << std::endl
-        << "tof 1 " << sensor_message_.tof_sensors[1] << std::endl
-        << "tof 2 " << sensor_message_.tof_sensors[2] << std::endl
-        << "tof 3 " << sensor_message_.tof_sensors[3] << std::endl
-        << "tof 4 " << sensor_message_.tof_sensors[4] << std::endl
-        << "tof 5 " << sensor_message_.tof_sensors[5] << std::endl
-        << "bottle sensor " << sensor_message_.bottle_sensor << "\n" << std::endl;
+        << "tof fm " << sensor_message_.tof_sensors[0] << std::endl
+        << "tof fr " << sensor_message_.tof_sensors[1] << std::endl
+        << "tof fl " << sensor_message_.tof_sensors[2] << std::endl
+        << "tof sr " << sensor_message_.tof_sensors[3] << std::endl
+        << "tof sl " << sensor_message_.tof_sensors[4] << std::endl
+        << "tof bm " << sensor_message_.tof_sensors[5] << std::endl
+        << "bottle sensor " << sensor_message_.bottle_sensor << std::endl
+        << "roller encoder" << sensor_message_.roller_encoder_state << "\n" << std::endl;
 
         for (uint8_t i=0; i<TOF_SENSOR_NUM; ++i){
             // header
@@ -231,6 +248,28 @@ void SerialPortWorker::ReadWriteSerialPort() {
     close(serial_port);
 }
 
+void SerialPortWorker::GetCommand(){
+    ros::Subscriber command_suscriber = node_handle_.subscribe("cmd_vel", queue_size, CmdCallback);
+    while(!stop_){
+        ros::spinOnce();
+        std::this_thread::sleep_for(3ms);
+    }
+}
+
 void SerialPortWorker::Start() {
     th_read_write_serial_port_ = std::thread(&SerialPortWorker::ReadWriteSerialPort, this);
+    th_get_command_ = std::thread(&SerialPortWorker::GetCommand, this);
+}
+
+void CmdCallback(const geometry_msgs::Twist::ConstPtr& velocity_command){
+    double v_t = std::sqrt(velocity_command->linear.x*velocity_command->linear.x + velocity_command->linear.y*velocity_command->linear.y);
+
+    double omega_t = velocity_command->angular.z;
+    double omega_r = (2*v_t + omega_t*L) / (2*R); // SI
+    double omega_l = (2*v_t - omega_t*L) / (2*R); // SI
+
+    mu_command.lock();
+    leftMotorCommand = omega_l*30/M_PI;
+    rightMotorCommand = omega_r*30/M_PI;
+    mu_command.unlock();
 }

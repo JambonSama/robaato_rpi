@@ -24,12 +24,16 @@ protected:
 
     // THREAD CLASS MEMBERS
     std::thread th_read_write_serial_port_;
+    std::thread th_get_command_;
 
     // CLASS METHODS
     void ReadWriteSerialPort();
+    void GetCommand();
 
 public:
     SerialPortWorker();
     ~SerialPortWorker();
     void Start();
 };
+
+void CmdCallback(const geometry_msgs::Twist::ConstPtr& velocity_command);

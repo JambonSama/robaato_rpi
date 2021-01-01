@@ -1,0 +1,22 @@
+<launch>
+
+  <master auto="start"/>
+
+  <!-- Run the map server -->
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find robaato_navigation)/config/static_map.png 0.01"/>
+
+  <!-- Run fake localization compatible with AMCL output -->
+  <node pkg="fake_localization" type="fake_localization" name="fake_localization" output="screen">
+    <remap from="base_pose_ground_truth" to="odom"/>
+    <param name="global_frame_id " type="string" value="map"/>
+  </node>
+
+  <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+    <rosparam file="$(find robaato_navigation)/costmap_common_params.yaml" command="load" ns="global_costmap"/>
+    <rosparam file="$(find robaato_navigation)/costmap_common_params.yaml" command="load" ns="local_costmap"/>
+    <rosparam file="$(find robaato_navigation)/local_costmap_params.yaml" command="load"/>
+    <rosparam file="$(find robaato_navigation)/global_costmap_params.yaml" command="load"/>
+    <rosparam file="$(find robaato_navigation)/base_local_planner_params.yaml" command="load"/>
+  </node>
+
+</launch>

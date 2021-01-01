@@ -124,8 +124,6 @@ add_executable(
     robaato
     src/camera_worker.h
     src/camera_worker.cpp
-    src/controller.h
-    src/controller.cpp
     src/main.cpp
     src/message.h
     src/panoramic_camera_worker.h

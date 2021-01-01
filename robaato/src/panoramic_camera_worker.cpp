@@ -68,7 +68,7 @@ void PanoramicCameraWorker::ProcessFrame() {
     bool retval = true;                                 /// temp
 
     while (!stop_) {
-        std::cout << "pcw process frame while" << std::endl; /// temp
+        // std::cout << "pcw process frame while" << std::endl; /// temp
 
         // get the latest frame
         mu_camera_feed_.lock();
@@ -87,7 +87,7 @@ void PanoramicCameraWorker::ProcessFrame() {
             return;
         }
         ++frame_index_;
-        std::cout << "image num " << frame_index_ << std::endl;
+        // std::cout << "image num " << frame_index_ << std::endl;
 
         // sleep
         std::this_thread::sleep_for(1s);

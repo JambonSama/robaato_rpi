@@ -34,7 +34,7 @@ void CameraWorker::GrabFrame() {
     std::cout << "cw grab frame init" << std::endl; /// temp
 
     while (!stop_) {
-        std::cout << "cw grab frame while" << std::endl; /// temp
+        // std::cout << "cw grab frame while" << std::endl; /// temp
         mu_camera_feed_.lock();
         camera_feed_.grab();
         mu_camera_feed_.unlock();
