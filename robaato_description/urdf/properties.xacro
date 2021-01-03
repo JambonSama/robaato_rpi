@@ -7,11 +7,11 @@
   <xacro:property name="chassis_x" value="0.38000"/>
   <xacro:property name="chassis_y" value="0.31400"/>
   <xacro:property name="chassis_z" value="0.11900"/>
-  <xacro:property name="chassis_w" value="1.00000"/>
+  <xacro:property name="chassis_w" value="3.00000"/>
 
   <xacro:property name="wheel_r" value="0.0350"/>
   <xacro:property name="wheel_d" value="0.0240"/>
-  <xacro:property name="wheel_w" value="0.2000"/>
+  <xacro:property name="wheel_w" value="0.1000"/>
 
   <xacro:property name="wheel_dx" value="0.04848"/>
   <xacro:property name="wheel_dy" value="0.00850"/>

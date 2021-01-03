@@ -1,5 +1,7 @@
 #include "panoramic_camera_worker.h"
 
+using namespace std::chrono_literals;
+
 namespace {
 // h/s/v for hue, value, saturation
 // lower case / upper case for min Max
@@ -53,7 +55,9 @@ const uint16_t g_pos_y = 800;
 const double cam_pano_rot_init = 4*M_PI/3;
 } // namespace
 
-PanoramicCameraWorker::PanoramicCameraWorker(uint64_t index) : CameraWorker(index) {
+PanoramicCameraWorker::PanoramicCameraWorker(uint64_t index) : 
+    CameraWorker(index) //
+{
     std::cout << "pcw constructor" << std::endl;
 }
 

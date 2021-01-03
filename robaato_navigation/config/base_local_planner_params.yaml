@@ -1,11 +1,33 @@
 TrajectoryPlannerROS:
-  max_vel_x: 0.45
-  min_vel_x: 0.1
-  max_vel_theta: 1.0
-  min_in_place_vel_theta: 0.4
+  # Robot Configuration Parameters
+  acc_lim_x: 0.04
+  acc_lim_y: 0.04
+  acc_lim_theta: 0.25
 
-  acc_lim_theta: 3.2
-  acc_lim_x: 2.5
-  acc_lim_y: 2.5
+  max_vel_x: 0.05
+  min_vel_x: 0.009
+  max_vel_theta: 0.30
+  min_vel_theta: -0.30
+  min_in_place_vel_theta: 0.30
+
+  backup_vel: -0.06
 
   holonomic_robot: false
+
+  # Goal Tolerance Parameters
+  yaw_goal_tolerance: 0.05 # = 2.8 deg
+  xy_goal_tolerance: 0.10
+
+  # Oscillation Prevention Parameters
+  oscillation_reset_dist: 0.50
+
+#R = 0.0350;
+#L = 0.3550;
+#gear reduction = 172
+
+#accel t = 0.04261850499055921
+#alpha t = 0.2401042534679392
+#v t max = 0.06392775748583882
+#v t min = 0.008523700998111842
+#w t max = 0.3601563802019088
+#w t min = 0.04802085069358784

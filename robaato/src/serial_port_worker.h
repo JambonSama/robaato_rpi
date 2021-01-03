@@ -18,17 +18,23 @@ class SerialPortWorker {
 protected:
     // BASE CLASS MEMBERS
     bool stop_ = false;
+    int serial_port_;
     SensorMessage sensor_message_;
     ControlMessage control_message_;
     ros::NodeHandle node_handle_;
 
     // THREAD CLASS MEMBERS
     std::thread th_read_write_serial_port_;
-    std::thread th_get_command_;
+    std::thread th_update_velocity_command_;
 
     // CLASS METHODS
+    void ConfigureSerialPort();
+    void DisplayControlCommand();
+    void DisplaySensorReadings();
+    void WriteControlMessage();
+    void ReadSensorMessage();
+    void UpdateVelocityCommand();
     void ReadWriteSerialPort();
-    void GetCommand();
 
 public:
     SerialPortWorker();
@@ -36,4 +42,4 @@ public:
     void Start();
 };
 
-void CmdCallback(const geometry_msgs::Twist::ConstPtr& velocity_command);
+void VelocityCmdCallback(const geometry_msgs::Twist::ConstPtr& velocity_command);

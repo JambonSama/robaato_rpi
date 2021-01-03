@@ -1,6 +1,6 @@
 image: static_map.png
 resolution: 0.01
-origin: [2.0,2.0,0.0]
-occupied_thresh: 0.65
-free_thresh: 0.196
+#origin: [10.0,10.0,0.0]
+occupied_thresh: 0.8
+free_thresh: 0.2
 negate: 0

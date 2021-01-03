@@ -141,7 +141,7 @@
 
   <xacro:tof_sensor
     tof_name="fm"
-    pos_x="${chassis_x*0.4}"
+    pos_x="${0.1675}"
     pos_y="0"
     pos_z="0"
     ang_r="0"
@@ -151,47 +151,47 @@
 
   <xacro:tof_sensor
     tof_name="fl"
-    pos_x="${chassis_x*0.35}"
-    pos_y="${chassis_y*0.35}"
+    pos_x="${0.11698}"
+    pos_y="${0.12504}"
     pos_z="0"
     ang_r="0"
     ang_p="0"
-    ang_y="${PI/6}"
+    ang_y="${44*PI/180}"
   />
 
   <xacro:tof_sensor
     tof_name="fr"
-    pos_x="${chassis_x*0.35}"
-    pos_y="${-chassis_y*0.35}"
+    pos_x="${0.11698}"
+    pos_y="${-0.12504}"
     pos_z="0"
     ang_r="0"
     ang_p="0"
-    ang_y="${-PI/6}"
+    ang_y="${-44*PI/180}"
   />
 
   <xacro:tof_sensor
     tof_name="sl"
-    pos_x="${-chassis_x*0.2}"
-    pos_y="${chassis_y*0.35}"
+    pos_x="${-0.0125}"
+    pos_y="${0.145}"
     pos_z="0"
     ang_r="0"
     ang_p="0"
-    ang_y="${2*PI/3}"
+    ang_y="${PI/2}"
   />
 
   <xacro:tof_sensor
     tof_name="sr"
-    pos_x="${-chassis_x*0.2}"
-    pos_y="${-chassis_y*0.35}"
+    pos_x="${-0.0125}"
+    pos_y="${-0.145}"
     pos_z="0"
     ang_r="0"
     ang_p="0"
-    ang_y="${-2*PI/3}"
+    ang_y="${-PI/2}"
   />
 
   <xacro:tof_sensor
     tof_name="bm"
-    pos_x="${-chassis_x*0.4}"
+    pos_x="${-0.177}"
     pos_y="0"
     pos_z="0"
     ang_r="0"

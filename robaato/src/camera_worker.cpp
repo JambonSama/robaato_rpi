@@ -1,5 +1,7 @@
 #include "camera_worker.h"
 
+using namespace std::chrono_literals;
+
 CameraWorker::CameraWorker(uint64_t index)
     : camera_index_(index), /// temp
       camera_feed_(index)   //

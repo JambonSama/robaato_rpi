@@ -1,5 +1,8 @@
 global_costmap:
   global_frame: map
   robot_base_frame: base_link
-  update_frequency: 5.0 # frequency [Hz] of the costmap update loop
+  update_frequency: 50.0 # frequency [Hz] of the costmap update loop
   static_map: true
+  resolution: 0.01
+  origin_x: 0.5
+  origin_y: 0.5
