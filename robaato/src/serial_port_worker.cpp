@@ -2,10 +2,8 @@
 
 // C++ library headers
 #include <iostream>
-
-// C library headers
-//#include <stdio.h>
 #include <cstring>
+#include <algorithm>
 
 // Linux headers
 #include <errno.h>   // error integer and strerror() function
@@ -17,7 +15,7 @@ using namespace std::chrono_literals;
 
 namespace {
 // queue size for published values
-const uint32_t queue_size = 50;
+const uint32_t queue_size = 1;
 const size_t tof_sensor_number = 6;
 
 // FM FR FL SR SL BM
@@ -40,6 +38,11 @@ double omega_wheel_r;
 double v_lin;
 double v_ang;
 
+// range value min-max
+float min_range = 0.02; // 2 cm
+float max_range = 4.00; // 4 m
+
+// mutexes
 std::mutex mu_velocity_command;
 std::mutex mu_motor_command;
 std::mutex mu_omega_wheel;
@@ -63,6 +66,10 @@ SerialPortWorker::~SerialPortWorker() {
         th_update_velocity_command_.join();
     }
     std::cout << "spw destructor get command" << std::endl; /// temp
+
+    if (th_publish_tf_.joinable()) {
+        th_publish_tf_.join();
+    }
 }
 
 void SerialPortWorker::ConfigureSerialPort(){
@@ -119,13 +126,16 @@ void SerialPortWorker::DisplayControlCommand(){
 }
 
 void SerialPortWorker::DisplaySensorReadings(){
-    std::cout 
-    << "ax " << sensor_message_.ax << std::endl
-    << "ay " << sensor_message_.ay << std::endl
-    << "az " << sensor_message_.az << std::endl
-    << "yaw " << sensor_message_.yaw << std::endl
-    << "pitch " << sensor_message_.pitch << std::endl
-    << "roll " << sensor_message_.roll << std::endl
+    std::cout // a_x, a_y, a_z, roll, pitch, yaw, v_roll, v_pitch, v_yaw
+    << "ax " << sensor_message_.imu[0] << std::endl
+    << "ay " << sensor_message_.imu[1] << std::endl
+    << "az " << sensor_message_.imu[2] << std::endl
+    << "roll " << sensor_message_.imu[3] << std::endl
+    << "pitch " << sensor_message_.imu[4] << std::endl
+    << "yaw " << sensor_message_.imu[5] << std::endl
+    << "vel roll " << sensor_message_.imu[6] << std::endl
+    << "vel pitch " << sensor_message_.imu[7] << std::endl
+    << "vel yaw " << sensor_message_.imu[8] << std::endl
     << "tof fm " << sensor_message_.tof_sensors[0] << std::endl
     << "tof fr " << sensor_message_.tof_sensors[1] << std::endl
     << "tof fl " << sensor_message_.tof_sensors[2] << std::endl
@@ -181,20 +191,11 @@ void SerialPortWorker::ReadWriteSerialPort() {
         // rest of message
         tof_range[i].radiation_type = sensor_msgs::Range::ULTRASOUND;
         tof_range[i].field_of_view = 0.5235987755982989; // 30 deg = 0.52 rad
-        tof_range[i].min_range = 0.02; // 2 cm
-        tof_range[i].max_range = 4.00; // 4 m
+        tof_range[i].min_range = min_range;
+        tof_range[i].max_range = max_range;
     }
 
-    // odometry publisher and tf
-    ros::Publisher odom_publisher = node_handle_.advertise<nav_msgs::Odometry>("odom", queue_size);
-    tf::TransformBroadcaster odom_broadcaster;
-
-    double x = 0.0;
-    double y = 0.0;
-    double th = 0.0;
-
-    ros::Time current_time = ros::Time::now();
-    ros::Time last_time = ros::Time::now();
+    ros::Time time_stamp;
 
     while (!stop_) {
         // write to serial port
@@ -204,20 +205,74 @@ void SerialPortWorker::ReadWriteSerialPort() {
         this->ReadSensorMessage();
 
         // sensor cout display (for debug)
-        this->DisplayControlCommand();
-        this->DisplaySensorReadings();
+        //this->DisplayControlCommand();
+        //this->DisplaySensorReadings();
+
+        // time update 
+        time_stamp = ros::Time::now();
 
         // tof publication
         for (uint8_t i=0; i<TOF_SENSOR_NUM; ++i){
             // header
-            tof_range[i].header.stamp = ros::Time::now();
+            tof_range[i].header.stamp = time_stamp;
             // rest of message
-            tof_range[i].range = sensor_message_.tof_sensors[i];
-            //tof_range[i].range = 10.0;
+            tof_range[i].range = std::clamp(sensor_message_.tof_sensors[i], min_range, max_range);
             // publication
             tof_publisher[i].publish(tof_range[i]);
         }
+    }
 
+    // write to serial port to stop motors
+    control_message_.gate_position = false;
+    mu_velocity_command.lock();
+    control_message_.left_wheel_direction = true;
+    control_message_.right_wheel_direction = true;
+    control_message_.left_wheel_speed = 0;
+    control_message_.right_wheel_speed = 0;
+    mu_velocity_command.unlock();
+    control_message_.roller_state = 0;
+
+    write(serial_port_, (char *)&control_message_, sizeof(control_message_));
+
+    //std::this_thread::sleep_for(20s);
+    close(serial_port_);
+
+    std::cout << "spw: asked for motor stop" << std::endl;
+
+}
+
+void SerialPortWorker::Start() {
+    this->ConfigureSerialPort();
+
+    th_read_write_serial_port_ = std::thread(&SerialPortWorker::ReadWriteSerialPort, this);
+    th_update_velocity_command_ = std::thread(&SerialPortWorker::UpdateVelocityCommand, this);
+    th_publish_tf_ = std::thread(&SerialPortWorker::PublishTf, this);
+
+}
+
+void SerialPortWorker::PublishTf(){
+    // base link -> chassis -> tof tf
+    KDL::Tree tf_tree;
+
+    if (!kdl_parser::treeFromFile("/home/pi/robaato_ck_ws/src/robaato_description/urdf/robaato.urdf", tf_tree)){
+        ROS_ERROR("Failed to construct kdl tree");
+    }
+    robot_state_publisher::RobotStatePublisher tf_publisher(tf_tree);
+
+    // odometry publisher and tf
+    ros::Publisher odom_publisher = node_handle_.advertise<nav_msgs::Odometry>("odom", queue_size);
+    tf::TransformBroadcaster odom_broadcaster;
+
+    double x = 0.5;
+    double y = 0.5;
+    double th = 0.0;
+
+    ros::Time current_time = ros::Time::now();
+    ros::Time last_time = ros::Time::now();
+
+    ros::Rate rate(50); // rate in [Hz]
+
+    while(!stop_){
         // odometry publication
         double v_x = v_lin * cos(th);
         double v_y = v_lin * sin(th);
@@ -271,25 +326,12 @@ void SerialPortWorker::ReadWriteSerialPort() {
 
         //publish the message
         odom_publisher.publish(odom);
+
+        //publish tf
+        tf_publisher.publishFixedTransforms("");
+        
+        rate.sleep();
     }
-
-    // write to serial port to stop motors
-    control_message_.left_wheel_direction = true;
-    control_message_.right_wheel_direction = true;
-    control_message_.left_wheel_speed = 0;
-    control_message_.right_wheel_speed = 0;
-
-    write(serial_port_, (char *)&control_message_, sizeof(control_message_));
-
-    std::cout << "spw: asked for motor stop" << std::endl;
-
-    close(serial_port_);
-}
-
-void SerialPortWorker::Start() {
-    this->ConfigureSerialPort();
-    th_read_write_serial_port_ = std::thread(&SerialPortWorker::ReadWriteSerialPort, this);
-    th_update_velocity_command_ = std::thread(&SerialPortWorker::UpdateVelocityCommand, this);
 }
 
 void VelocityCmdCallback(const geometry_msgs::Twist::ConstPtr& cmd_vel){
@@ -297,7 +339,7 @@ void VelocityCmdCallback(const geometry_msgs::Twist::ConstPtr& cmd_vel){
     velocity_command = *cmd_vel;
     mu_velocity_command.unlock();
 
-    v_lin = std::sqrt(velocity_command.linear.x*velocity_command.linear.x + velocity_command.linear.y*velocity_command.linear.y); // SI [m/s]
+    v_lin = velocity_command.linear.x; // SI [m/s]
     v_ang = velocity_command.angular.z; // SI [rad/s]
 
     mu_omega_wheel.lock();

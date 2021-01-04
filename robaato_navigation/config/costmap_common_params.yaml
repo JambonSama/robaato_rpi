@@ -1,23 +1,17 @@
 obstacle_range: 1.0 # maximum range sensor reading that will result in an obstacle being put into costmap
 footprint: [[0.3575, 0.0135], [0.3275, 0.157], [0.3115, 0.222],[0.2695, 0.222], [-0.035, 0.199], [-0.0525, 0.157], [-0.0525, -0.157], [-0.035, -0.199], [0.2695, -0.222], [0.3115, -0.222], [0.3275, -0.157], [0.3575, -0.0135]]
-#robot_radius: 0.2
-transform_tolerance: 3
+transform_tolerance: 3 # specifies the delay in transform (tf) data that is tolerable in seconds
 
 range_sensor_layer:
   enabled:              true  # whether it is enabled
-  topics:               ["tof_fm_link", "tof_fr_link", "tof_fl_link", "tof_sr_link", "tof_sl_link", "tof_bm_link"]
+  topics:               ["tof_fm", "tof_fr", "tof_fl", "tof_sr", "tof_sl", "tof_bm"]
   no_readings_timeout:  2.0  # if 0 then, no timeout; otherwise, determines timeout before layer is not current
   clear_threshold:      0.2  # probability below which cells are marked as free
   mark_threshold:       0.8  # probability above which cells are marked as occupied
-  clear_on_max_reading: true
+  clear_on_max_reading: true # whether to clear the sensor readings on max. range 
   ns: "/"
 
 inflation_layer:
   enabled:             true  # whether it is enabled
   cost_scaling_factor: 10.0  # exponential rate at which the obstacle cost drops off (default: 10)
   inflation_radius:    0.25  # max. distance from an obstacle at which costs are incurred for planning paths.
-
-plugins:
-  - {name: static_layer,       type: "costmap_2d::StaticLayer"}
-  - {name: range_sensor_layer, type: "range_sensor_layer::RangeSensorLayer"}
-  - {name: inflation_layer,    type: "costmap_2d::InflationLayer"}

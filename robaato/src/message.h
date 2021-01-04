@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #define TOF_SENSOR_NUM (6)
+#define IMU_QUANTITIES_NUM (9)
 
 struct __attribute__((__packed__)) ControlMessage {
     bool gate_position = false;        //(=0 for CLOSED) (=1 for OPEN)
@@ -14,13 +15,8 @@ struct __attribute__((__packed__)) ControlMessage {
 };
 
 struct __attribute__((__packed__)) SensorMessage {
-    float ax = 0;
-    float ay = 0;
-    float az = 0;
-    float yaw = 0;
-    float pitch = 0;
-    float roll = 0;
-    float tof_sensors[TOF_SENSOR_NUM] = {0, 0, 0, 0, 0, 0}; // FM FR FL SR SL BM
-    bool bottle_sensor = 0; //(=0: No bottle detected) (=1: bottle detected)
-    bool roller_encoder_state = 0;          //(=0: Roller is off) (=1: roller is on)
+	float imu[IMU_QUANTITIES_NUM] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; // a_x, a_y, a_z, roll, pitch, yaw, v_roll, v_pitch, v_yaw
+    float tof_sensors[TOF_SENSOR_NUM] = {0, 0, 0, 0, 0, 0};      // FM FR FL SR SL BM
+    bool bottle_sensor = 0;                                      //(=0: No bottle detected) (=1: bottle detected)
+    bool roller_encoder_state = 0;                               //(=0: Roller is off) (=1: roller is on)
 };

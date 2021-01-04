@@ -1,8 +1,10 @@
 global_costmap:
   global_frame: map
   robot_base_frame: base_link
-  update_frequency: 50.0 # frequency [Hz] of the costmap update loop
+  update_frequency: 1.0 # frequency [Hz] of the costmap update loop   # can probably be less, even 0 if no obstacles
   static_map: true
-  resolution: 0.01
-  origin_x: 0.5
-  origin_y: 0.5
+  resolution: 0.04  #0.1 -  0.15 
+
+  plugins:
+    - {name: static_layer,       type: "costmap_2d::StaticLayer"}
+    - {name: inflation_layer,    type: "costmap_2d::InflationLayer"}

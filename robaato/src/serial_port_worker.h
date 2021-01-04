@@ -6,10 +6,12 @@
 #include <thread>
 
 // ros headers
+#include <kdl_parser/kdl_parser.hpp>
+#include <nav_msgs/Odometry.h>
+#include <robot_state_publisher/robot_state_publisher.h>
 #include <ros/ros.h>
 #include <sensor_msgs/Range.h>
 #include <tf/transform_broadcaster.h>
-#include <nav_msgs/Odometry.h>
 
 // project headers
 #include "message.h"
@@ -19,6 +21,7 @@ protected:
     // BASE CLASS MEMBERS
     bool stop_ = false;
     int serial_port_;
+
     SensorMessage sensor_message_;
     ControlMessage control_message_;
     ros::NodeHandle node_handle_;
@@ -26,6 +29,7 @@ protected:
     // THREAD CLASS MEMBERS
     std::thread th_read_write_serial_port_;
     std::thread th_update_velocity_command_;
+    std::thread th_publish_tf_;
 
     // CLASS METHODS
     void ConfigureSerialPort();
@@ -35,6 +39,7 @@ protected:
     void ReadSensorMessage();
     void UpdateVelocityCommand();
     void ReadWriteSerialPort();
+    void PublishTf();
 
 public:
     SerialPortWorker();

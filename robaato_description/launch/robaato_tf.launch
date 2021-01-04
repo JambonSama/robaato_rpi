@@ -1,9 +1,0 @@
-<launch>
-  <!-- Load the urdf into the parameter server. -->
-  <param name="robaato_description" textfile="$(find robaato_description)/urdf/robaato.urdf"/>
-  
-  <node pkg="robot_state_publisher" type="robot_state_publisher" name="rob_st_pub">
-    <remap from="robot_description" to="robaato_description"/>
-    <!--remap from="joint_states" to="different_joint_states"/-->
-  </node>
-</launch>

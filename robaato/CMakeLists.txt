@@ -9,7 +9,9 @@ project(robaato)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
     geometry_msgs
+    kdl_parser
     move_base
+    robot_state_publisher
     roscpp
     std_msgs
     tf
@@ -130,6 +132,8 @@ add_executable(
     src/panoramic_camera_worker.cpp
     src/serial_port_worker.h
     src/serial_port_worker.cpp)
+
+target_compile_features(robaato PRIVATE cxx_std_17)
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
