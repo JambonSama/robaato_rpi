@@ -1,50 +1,47 @@
 #pragma once
 
-// general c++ headers
-#include <cstdint>
+// C++ headers
 #include <mutex>
 #include <thread>
 
-// ros headers
-#include <kdl_parser/kdl_parser.hpp>
-#include <nav_msgs/Odometry.h>
-#include <robot_state_publisher/robot_state_publisher.h>
+// ROS headers
+#include <geometry_msgs/Twist.h>
 #include <ros/ros.h>
-#include <sensor_msgs/Range.h>
-#include <tf/transform_broadcaster.h>
 
 // project headers
 #include "message.h"
 
 class SerialPortWorker {
 protected:
-    // BASE CLASS MEMBERS
-    bool stop_ = false;
-    int serial_port_;
+	// BASE CLASS MEMBERS
+	bool stop_ = false;
+	int serial_port_;
 
-    SensorMessage sensor_message_;
-    ControlMessage control_message_;
-    ros::NodeHandle node_handle_;
+	SensorMessage sensor_message_;
+	ControlMessage control_message_;
+	ros::NodeHandle node_handle_;
 
-    // THREAD CLASS MEMBERS
-    std::thread th_read_write_serial_port_;
-    std::thread th_update_velocity_command_;
-    std::thread th_publish_tf_;
+	// THREAD CLASS MEMBERS
+	std::thread th_read_write_serial_port_;
+	std::thread th_update_velocity_command_;
+	std::thread th_broadcast_tfs_;
+	std::thread th_publish_topics_;
 
-    // CLASS METHODS
-    void ConfigureSerialPort();
-    void DisplayControlCommand();
-    void DisplaySensorReadings();
-    void WriteControlMessage();
-    void ReadSensorMessage();
-    void UpdateVelocityCommand();
-    void ReadWriteSerialPort();
-    void PublishTf();
+	// CLASS METHODS
+	void BroadcastTfs();
+	void ConfigureSerialPort();
+	void DisplayControlCommand();
+	void DisplaySensorReadings();
+	void PublishTopics();
+	void ReadSensorMessage();
+	void ReadWriteSerialPort();
+	void UpdateVelocityCommand();
+	void WriteControlMessage();
 
 public:
-    SerialPortWorker();
-    ~SerialPortWorker();
-    void Start();
+	SerialPortWorker();
+	~SerialPortWorker();
+	void Start();
 };
 
-void VelocityCmdCallback(const geometry_msgs::Twist::ConstPtr& velocity_command);
+void VelocityCmdCallback(const geometry_msgs::Twist::ConstPtr &velocity_command);

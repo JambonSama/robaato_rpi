@@ -6,8 +6,8 @@ TrajectoryPlannerROS:
   acc_lim_y: 0.04
   acc_lim_theta: 0.25
 
-  max_vel_x: 0.05
-  min_vel_x: 0.009
+  max_vel_x: 0.08 #0.05
+  min_vel_x: -0.05 #0.009
   max_vel_theta: 0.30
   min_vel_theta: -0.30
   min_in_place_vel_theta: 0.30
@@ -16,12 +16,27 @@ TrajectoryPlannerROS:
 
   holonomic_robot: false
 
+  # Forward Simulation Parameters
+  sim_time: 1.0 #The amount of time to forward-simulate trajectories in seconds (default: 1.0)
+  sim_granularity: 0.025 #The step size, in meters, to take between points on a given trajectory (default:0.025)
+  angular_sim_granularity: 0.025 #The step size, in radians, to take between angular samples on a given trajectory
+  vx_samples: 2 #The number of samples to use when exploring the x velocity space (default: 3)
+  vtheta_samples: 10 #The number of samples to use when exploring the theta velocity space (default: 20)
+  controller_frequency: 20.0 #The frequency at which this controller will be called in Hz. Uses searchParam to read the parameter from parent namespaces if not set in the namespace of the controller. For use with move_base, this means that you only need to set its "controller_frequency" parameter and can safely leave this one unset. (default:20.0)
+  
   # Goal Tolerance Parameters
   yaw_goal_tolerance: 0.05 # = 2.8 deg
   xy_goal_tolerance: 0.10
 
   # Oscillation Prevention Parameters
-  oscillation_reset_dist: 0.50
+  oscillation_reset_dist: 0.2 # How far the robot must travel in meters before oscillation flags are reset
+
+
+  #Trajectory Scoring Parameters
+  meter_scoring: true #Whether the gdist_scale and pdist_scale parameters should assume that goal_distance and path_distance are expressed in units of meters or cells. Cells are assumed by default.
+  path_distance_bias: 2.0 #0.01 #The weighting for how much the controller should stay close to the path it was given, maximal possible value is 5.0
+  goal_distance_bias: 2.0 #4.0 #The weighting for how much the controller should attempt to reach its local goal, also controls speed, maximal possible value is 5.0
+  occdist_scale: 0.002 #0.0 #The weighting for how much the controller should attempt to avoid obstacles
 
 #R = 0.0350;
 #L = 0.3550;
