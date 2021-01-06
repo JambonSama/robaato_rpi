@@ -37,6 +37,7 @@ protected:
 	void ReadWriteSerialPort();
 	void UpdateVelocityCommand();
 	void WriteControlMessage();
+	void WriteNullControlMessage();
 
 public:
 	SerialPortWorker();

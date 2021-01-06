@@ -40,17 +40,22 @@ const double L = 0.31400 + 2 * 0.00850 + 0.0240;
 const double gear_reduction = 172;
 
 // motor command
+const double f = 8;
 geometry_msgs::Twist velocity_command;
-double motor_command_l;
-double motor_command_r;
-double omega_wheel_l;
-double omega_wheel_r;
-double v_lin;
-double v_ang;
+double motor_command_l = 0;
+double motor_command_r = 0;
+double omega_wheel_l = 0;
+double omega_wheel_r = 0;
+double v_lin = 0;
+double v_ang = 0;
+const double bl[TOF_SENSOR_NUM] = {-1 * f, -1 * f, 1 * f, -1 * f, 1 * f, 1 * f};
+const double br[TOF_SENSOR_NUM] = {-1 * f, 1 * f, -1 * f, 1 * f, -1 * f, 1 * f};
+double cbl = 0;
+double cbr = 0;
 
 // range value min-max
 float min_range = 0.02; // 2 cm
-float max_range = 4.00; // 4 m
+float max_range = 1.00; // 50 cm
 
 // mutexes
 std::mutex mu_velocity_command;
@@ -103,7 +108,6 @@ void SerialPortWorker::ConfigureSerialPort() {
 	tty.c_cflag |= CS8;            // 8 bits per byte (most common)
 	tty.c_cflag &= ~CRTSCTS;       // disable RTS/CTS hardware flow control (most common)
 	tty.c_cflag |= CREAD | CLOCAL; // turn on READ & ignore ctrl lines (CLOCAL = 1)
-
 	tty.c_lflag &= ~ICANON;
 	tty.c_lflag &= ~ECHO;                   // disable echo
 	tty.c_lflag &= ~ECHOE;                  // disable erasure
@@ -144,9 +148,9 @@ void SerialPortWorker::DisplaySensorReadings() {
 	std::cout << "ax " << sensor_message_.imu[A_X] << std::endl
 			  << "ay " << sensor_message_.imu[A_Y] << std::endl
 			  << "az " << sensor_message_.imu[A_Z] << std::endl
-			  << "vel roll " << sensor_message_.imu[V_ROLL] << std::endl
-			  << "vel pitch " << sensor_message_.imu[V_PITCH] << std::endl
-			  << "vel yaw " << sensor_message_.imu[V_YAW] << std::endl
+			  << "v roll " << sensor_message_.imu[V_ROLL] << std::endl
+			  << "v pitch " << sensor_message_.imu[V_PITCH] << std::endl
+			  << "v yaw " << sensor_message_.imu[V_YAW] << std::endl
 			  << "tof fm " << sensor_message_.tof_sensors[FM] << std::endl
 			  << "tof fr " << sensor_message_.tof_sensors[FR] << std::endl
 			  << "tof fl " << sensor_message_.tof_sensors[FL] << std::endl
@@ -158,7 +162,54 @@ void SerialPortWorker::DisplaySensorReadings() {
 			  << std::endl;
 }
 
+void SerialPortWorker::WriteNullControlMessage() {
+	control_message_.gate_position = false;
+	mu_velocity_command.lock();
+	control_message_.left_wheel_direction = 0;
+	control_message_.right_wheel_direction = 0;
+	control_message_.left_wheel_speed = 0;
+	control_message_.right_wheel_speed = 0;
+	mu_velocity_command.unlock();
+	control_message_.roller_state = 0;
+
+	write(serial_port_, (char *)&control_message_, sizeof(control_message_));
+}
+
 void SerialPortWorker::WriteControlMessage() {
+
+	// if (sensor_message_.tof_sensors[0] < max_range || sensor_message_.tof_sensors[1] < max_range
+	// || 	sensor_message_.tof_sensors[2] < max_range || sensor_message_.tof_sensors[3] < max_range
+	// ||
+	//	sensor_message_.tof_sensors[4] < max_range || sensor_message_.tof_sensors[5] < max_range) {
+
+	//	std::cout << "NOT RESET\n" << std::endl;
+	//	//this->DisplaySensorReadings();
+	//	for (size_t i = 0; i < TOF_SENSOR_NUM; ++i) {
+	//		if (sensor_message_.tof_sensors[i] != 0) {
+	//			cbl += bl[i] / sensor_message_.tof_sensors[i];
+	//			cbr += br[i] / sensor_message_.tof_sensors[i];
+	//		}
+	//	}
+	//} else {
+	//	std::cout << "RESET\n" << std::endl;
+	//	//this->DisplaySensorReadings();
+	//	cbl = 0;
+	//	cbr = 0;
+	//	// motor_command_l = 0;
+	//	// motor_command_r = 0;
+	//}
+
+	// motor_command_l += cbl;
+	// motor_command_r += cbr;
+	// motor_command_l = std::clamp(motor_command_l, -3000., 3000.);
+	// motor_command_r = std::clamp(motor_command_r, -3000., 3000.);
+
+	// std::cout << "lcm " << motor_command_l << std::endl
+	//		  << "rmc " << motor_command_r << std::endl
+	//		  << "lef buff " << cbl << std::endl
+	//		  << "rig buff " << cbr << "\n"
+	//		  << std::endl;
+
 	control_message_.gate_position = false;
 	mu_velocity_command.lock();
 	control_message_.left_wheel_direction = motor_command_l > 0;
@@ -192,7 +243,20 @@ void SerialPortWorker::UpdateVelocityCommand() {
 }
 
 void SerialPortWorker::ReadWriteSerialPort() {
+
+	ros::Time start_time = ros::Time::now();
+	ros::Time current_time = start_time;
+
+	while ((current_time - start_time).toSec() < 20) {
+		current_time = ros::Time::now();
+		// write to serial port
+		this->WriteNullControlMessage();
+
+		// read from serial port
+		this->ReadSensorMessage();
+	}
 	while (!stop_) {
+
 		// write to serial port
 		this->WriteControlMessage();
 
@@ -205,16 +269,7 @@ void SerialPortWorker::ReadWriteSerialPort() {
 	}
 
 	// write to serial port to stop motors
-	control_message_.gate_position = false;
-	mu_velocity_command.lock();
-	control_message_.left_wheel_direction = true;
-	control_message_.right_wheel_direction = true;
-	control_message_.left_wheel_speed = 0;
-	control_message_.right_wheel_speed = 0;
-	mu_velocity_command.unlock();
-	control_message_.roller_state = 0;
-
-	write(serial_port_, (char *)&control_message_, sizeof(control_message_));
+	this->WriteNullControlMessage();
 
 	close(serial_port_);
 
@@ -242,71 +297,11 @@ void SerialPortWorker::BroadcastTfs() {
 	robot_state_publisher::RobotStatePublisher base_link2robot_tf_bc(
 		base_link2robot_tf); // (base_link -> robot) broadcaster
 
-	// odometry topic and odometry to base link tf
-	ros::Publisher odom_publisher =
-		node_handle_.advertise<nav_msgs::Odometry>("odom", queue_size); // odometry topic
-	tf::TransformBroadcaster odom2base_link_bc; // (odom -> base_link) broadcaster
-
-	double x = 0.5;
-	double y = 0.5;
-	double th = 0.0;
-
 	ros::Time current_time = ros::Time::now();
 	ros::Time last_time = ros::Time::now();
 	ros::Rate rate(tf_rate);
 
 	while (!stop_) {
-		// compute odometry
-		double v_x = v_lin * cos(th);
-		double v_y = v_lin * sin(th);
-
-		last_time = current_time;
-		current_time = ros::Time::now();
-
-		double dt = (current_time - last_time).toSec();
-		double delta_x = v_x * dt;
-		double delta_y = v_y * dt;
-		double delta_th = v_ang * dt;
-
-		x += delta_x;
-		y += delta_y;
-		th += delta_th;
-		geometry_msgs::Quaternion odom_quat =
-			tf::createQuaternionMsgFromYaw(th); // because odometry is 6DOF
-
-		// odometry to base link tf
-		geometry_msgs::TransformStamped odom2base_link_tf; // (odom -> base_link) transform
-		odom2base_link_tf.header.stamp = current_time;
-		odom2base_link_tf.header.frame_id = "odom";
-		odom2base_link_tf.child_frame_id = "base_link";
-
-		odom2base_link_tf.transform.translation.x = x;
-		odom2base_link_tf.transform.translation.y = y;
-		odom2base_link_tf.transform.translation.z = 0.0;
-		odom2base_link_tf.transform.rotation = odom_quat;
-
-		// odometry to base link tf broadcasting
-		odom2base_link_bc.sendTransform(odom2base_link_tf);
-
-		// odometry topic
-		nav_msgs::Odometry odom_msg;
-		odom_msg.header.stamp = current_time;
-		odom_msg.header.frame_id = "odom";
-		odom_msg.child_frame_id = "base_link";
-
-		odom_msg.pose.pose.position.x = x;
-		odom_msg.pose.pose.position.y = y;
-		odom_msg.pose.pose.position.z = 0.0;
-		odom_msg.pose.pose.orientation = odom_quat;
-		odom_msg.twist.twist.linear.x = v_x;
-		odom_msg.twist.twist.linear.y = v_y;
-		odom_msg.twist.twist.linear.z = 0;
-		odom_msg.twist.twist.angular.x = 0;
-		odom_msg.twist.twist.angular.y = 0;
-		odom_msg.twist.twist.angular.z = v_ang;
-
-		odom_publisher.publish(odom_msg);
-
 		// publish (base link -> robot) tf
 		base_link2robot_tf_bc.publishFixedTransforms("");
 
@@ -328,16 +323,6 @@ void SerialPortWorker::PublishTopics() {
 		tof_msg[i].max_range = max_range;
 	}
 
-	// // imu
-	// ros::Publisher imu_publisher;
-	// imu_publisher = node_handle_.advertise<sensor_msgs::Imu>("localization/imu", queue_size);
-	// sensor_msgs::Imu imu_msg;
-	// imu_msg.header.frame_id = "imu_link";
-	// imu_msg.orientation_covariance = {-1, 0, 0, 0, 0,
-	// 								  0,  0, 0, 0}; // because it doesn't give angular position
-	// imu_msg.angular_velocity_covariance = {0.000003, 0, 0, 0, 0.000035, 0, 0, 0, 0.00137};
-	// imu_msg.linear_acceleration_covariance = {0.0005, 0, 0, 0, 0.00016, 0, 0, 0, 0.00056};
-
 	// time
 	ros::Time time_stamp;
 	ros::Rate rate(tp_rate);
@@ -352,15 +337,6 @@ void SerialPortWorker::PublishTopics() {
 			tof_msg[i].range = std::clamp(sensor_message_.tof_sensors[i], min_range, max_range);
 			tof_publisher[i].publish(tof_msg[i]);
 		}
-
-		// imu_msg.header.stamp = time_stamp;
-		// imu_msg.angular_velocity.x = 0;       // sensor_message_.imu[V_ROLL];
-		// imu_msg.angular_velocity.y = 0;       // sensor_message_.imu[V_PITCH];
-		// imu_msg.angular_velocity.z = 0;       // sensor_message_.imu[V_YAW];
-		// imu_msg.linear_acceleration.x = 0;    // sensor_message_.imu[A_X];
-		// imu_msg.linear_acceleration.y = 0;    // sensor_message_.imu[A_Y];
-		// imu_msg.linear_acceleration.z = 9.81; // sensor_message_.imu[A_Z];
-		// imu_publisher.publish(imu_msg);
 
 		rate.sleep();
 	}

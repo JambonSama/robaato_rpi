@@ -33,6 +33,10 @@ CameraWorker::~CameraWorker() {
 	if (th_publish_topics_.joinable()) {
 		th_publish_topics_.join();
 	}
+
+	if (th_broadcast_tfs_.joinable()) {
+		th_broadcast_tfs_.join();
+	}
 }
 
 void CameraWorker::GrabFrame() {
@@ -40,12 +44,11 @@ void CameraWorker::GrabFrame() {
 	std::cout << "cw grab frame init" << std::endl; /// temp
 
 	while (!stop_) {
-		// std::cout << "cw grab frame while" << std::endl; /// temp
 		mu_camera_feed_.lock();
 		camera_feed_.grab();
 		mu_camera_feed_.unlock();
-		// RPi frame rate is approx. 33 Hz => T ~ 33 ms
-		// Nicolas' camera frame rate is approx.
+		// RPi cam frame rate is approx. 33 Hz => T ~ 33 ms
+		// Frontal camera frame rate is approx.
 		std::this_thread::sleep_for(3ms);
 	}
 }
@@ -54,4 +57,5 @@ void CameraWorker::Start() {
 	th_grab_frame_ = std::thread(&CameraWorker::GrabFrame, this);
 	th_process_frame_ = std::thread(&CameraWorker::ProcessFrame, this);
 	th_publish_topics_ = std::thread(&CameraWorker::PublishTopics, this);
+	th_broadcast_tfs_ = std::thread(&CameraWorker::BroadcastTfs, this);
 }

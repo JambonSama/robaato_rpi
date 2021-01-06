@@ -14,4 +14,4 @@ range_sensor_layer:
 inflation_layer:
   enabled:             true  # whether it is enabled
   cost_scaling_factor: 10.0  # exponential rate at which the obstacle cost drops off (default: 10)
-  inflation_radius:    0.25  # max. distance from an obstacle at which costs are incurred for planning paths.
+  inflation_radius:    0.6  # max. distance from an obstacle at which costs are incurred for planning paths.

@@ -24,6 +24,7 @@ protected:
 	std::thread th_grab_frame_;
 	std::thread th_process_frame_;
 	std::thread th_publish_topics_;
+	std::thread th_broadcast_tfs_;
 
 	// MUTEX CLASS MEMBERS
 	std::mutex mu_camera_feed_;
@@ -35,6 +36,7 @@ protected:
 	virtual void ProcessFrame() = 0;
 	// publishes necessary topics
 	virtual void PublishTopics() = 0;
+	virtual void BroadcastTfs() = 0;
 
 public:
 	// constructs the camera worker from the index of the camera on the device

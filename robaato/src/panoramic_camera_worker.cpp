@@ -48,8 +48,10 @@ const uint16_t HB = 124;
 const uint16_t hm = 128;
 const uint16_t HM = 145;
 
-const uint16_t arena_width = 8;  //[m]
-const uint16_t arena_height = 8; //[m]
+const uint16_t arena_width = 8;      //[m]
+const uint16_t arena_height = 8;     //[m]
+const uint16_t reachable_width = 8;  //[m]
+const uint16_t reachable_height = 5; //[m]
 
 // image metrics
 // const uint16_t frame_width = 640;
@@ -94,12 +96,21 @@ void PanoramicCameraWorker::BroadcastTfs() {
 	ros::Rate rate(tf_rate);
 
 	while (!stop_) {
-		v_x = pose_.x - x;
-		v_y = pose_.y - y;
-		v_yaw = pose_.yaw - yaw;
+		last_time = current_time;
+		current_time = ros::Time::now();
+
+		double dt = (current_time - last_time).toSec();
+
+		mu_position_.lock();
+		if (dt != 0) {
+			v_x = (pose_.x - x) / dt;
+			v_y = (pose_.y - y) / dt;
+			v_yaw = (pose_.yaw - yaw) / dt;
+		}
 		x = pose_.x;
 		y = pose_.y;
 		yaw = pose_.yaw;
+		mu_position_.unlock();
 
 		geometry_msgs::Quaternion odom_quat =
 			tf::createQuaternionMsgFromYaw(yaw); // because odometry is 6DOF
@@ -148,8 +159,6 @@ void PanoramicCameraWorker::ProcessFrame() {
 	bool retval = true;                                 /// temp
 
 	while (!stop_) {
-		// std::cout << "pcw process frame while" << std::endl; /// temp
-
 		// get the latest frame
 		mu_camera_feed_.lock();
 		camera_feed_.retrieve(frame_);
@@ -158,49 +167,26 @@ void PanoramicCameraWorker::ProcessFrame() {
 		// update position from frame
 		this->UpdatePoseFromFrame();
 
-		/// temp
-		// std::string filename =
-		//	"test" + std::to_string(camera_index_) + "_" + std::to_string(frame_index_) + ".png";
-		// retval = cv::imwrite(filename, frame_);
-		// if (!retval) {
-		//	std::cout << "ò_ó writing img\n";
-		//	return;
-		//}
 		++frame_index_;
-		// std::cout << "image num " << frame_index_ << std::endl;
 
 		// sleep
-		std::this_thread::sleep_for(50ms);
+		std::this_thread::sleep_for(20ms); // 50ms working
 	}
 }
 
 void PanoramicCameraWorker::UpdatePoseFromFrame() {
 	// img
-	/* imshow("srcImage", srcImage);
-	 waitKey(0);
-
-	 std::string img = ".\\imgs\\test_box1_b.png";
-	 cv::Mat srcImage = imread(img);
-	 if (!srcImage.data) {
-		 std::cout << "image not read " << std::endl;
-	 }
- */
 	cv::Mat polar_frame;
 
 	// convert from BGR to HSV
 	// dynamic is still uint8 (0 - 255)
 	// cv::cvtColor(srcImage, polar_frame, cv::COLOR_BGR2HSV);
 	cv::cvtColor(frame_, polar_frame, cv::COLOR_BGR2HSV);
-	/*   imshow("polar_frame", polar_frame);
-	   waitKey(0);
-   */
+
 	// convert from polar to cartesian coordinates
 	cv::Mat cart_frame;
 	cv::linearPolar(polar_frame, cart_frame, frame_center, outer_radius, cv::INTER_LINEAR);
 
-	/*  imshow("cart_frame", cart_frame);
-	  waitKey(0);
-  */
 	// extract each LED stripe according to color in HSV space
 	cv::Mat r_cart_mask;
 	cv::Mat g_cart_mask;
@@ -210,17 +196,6 @@ void PanoramicCameraWorker::UpdatePoseFromFrame() {
 	cv::inRange(cart_frame, cv::Scalar(hg, s, v), cv::Scalar(HG, S, V), g_cart_mask);
 	cv::inRange(cart_frame, cv::Scalar(hb, s, v), cv::Scalar(HB, S, V), b_cart_mask);
 	cv::inRange(cart_frame, cv::Scalar(hm, s, v), cv::Scalar(HM, S, V), m_cart_mask);
-
-	/*
-	   imshow("r_cart_mask", r_cart_mask);
-	   waitKey(0);
-	   imshow("g_cart_mask", g_cart_mask);
-	   waitKey(0);
-	   imshow("b_cart_mask", b_cart_mask);
-	   waitKey(0);
-	   imshow("m_cart_mask", m_cart_mask);
-	   waitKey(0);
-	  */
 
 	// horizontal projection to get a column vector
 	uint8_t dim = 1;
@@ -233,16 +208,6 @@ void PanoramicCameraWorker::UpdatePoseFromFrame() {
 	cv::reduce(b_cart_mask, b_projection, dim, cv::REDUCE_SUM, CV_32F);
 	cv::reduce(m_cart_mask, m_projection, dim, cv::REDUCE_SUM, CV_32F);
 
-	/*
-	imshow("r_projection", r_projection);
-	waitKey(0);
-	imshow("g_projection", g_projection);
-	waitKey(0);
-	imshow("b_projection", b_projection);
-	waitKey(0);
-	imshow("m_projection", m_projection);
-	waitKey(0);
-	*/
 	// max, only the x coord counts
 	cv::Point r_pos;
 	cv::Point g_pos;
@@ -258,11 +223,6 @@ void PanoramicCameraWorker::UpdatePoseFromFrame() {
 	double g_angle = this->VectorIndex2RadAngle(g_pos.y);
 	double b_angle = this->VectorIndex2RadAngle(b_pos.y);
 	double m_angle = this->VectorIndex2RadAngle(m_pos.y);
-
-	std::cout << "r_angle " << r_angle * 180 / M_PI << std::endl;
-	std::cout << "g_angle " << g_angle * 180 / M_PI << std::endl;
-	std::cout << "b_angle " << b_angle * 180 / M_PI << std::endl;
-	std::cout << "m_angle " << m_angle * 180 / M_PI << std::endl;
 
 	// find relative angles
 	double angle_MPR = abs(m_angle - r_angle);
@@ -280,19 +240,55 @@ void PanoramicCameraWorker::UpdatePoseFromFrame() {
 
 	Triangulate(&x, &y, &robot_angle, angle_MPR, angle_RPG, angle_GPB, angle_BPM, m_angle);
 
-	std::cout << "x " << x << std::endl;
-	std::cout << "y " << y << std::endl;
-	std::cout << "robot_angle " << robot_angle << std::endl;
+	static double x_prev = 4, y_prev = 4, robot_angle_prev = 0;
+	double dist_from_prev = sqrt((x - x_prev) * (x - x_prev) + (y - y_prev) * (y - y_prev));
+	double angle_dif_from_prev = abs(robot_angle - robot_angle_prev);
 
-	if (x < 0 || y < 0 || x > arena_width || y > arena_height) {
+	if (x < 0 || y < 0 || x > reachable_width || y > reachable_height) {
 		std::cout << "error position outsode arena x: " << x << "y: " << y << std::endl;
+	} else if (dist_from_prev > 2) {
+		std::cout << "error too far from previous value x_prev: " << x << "y_prev: " << y
+				  << std::endl;
 	} else {
+
+		/*
+		//averaging over nb_data_mean datapoints:
+		static double x_sum = {0};
+		static double y_sum = {0};
+		static double robot_angle_sum = {0};
+		static uint8_t counter_data = 0;
+		static uint8_t nb_data_mean = 4;
+
+		if (counter_data<nb_data_mean){
+			x_sum += x;
+			y_sum += y;
+			robot_angle_sum += robot_angle;
+		} else{
+
+			mu_position_.lock();
+			pose_.x = (x+x_sum)/(nb_data_mean+1);
+			pose_.y = (y+y_sum)/(nb_data_mean+1);
+			pose_.yaw = (robot_angle+robot_angle_data)/(nb_data_mean+1);
+			mu_position_.unlock();
+		}
+
+		*/
+
+		std::cout << "x " << x << std::endl;
+		std::cout << "y " << y << std::endl;
+		std::cout << "robot_angle " << robot_angle << std::endl;
+
 		// assign
 		mu_position_.lock();
 		pose_.x = x;
 		pose_.y = y;
 		pose_.yaw = robot_angle;
 		mu_position_.unlock();
+
+		// update pevious values
+		x_prev = x;
+		y_prev = y;
+		robot_angle_prev = robot_angle;
 	}
 }
 
@@ -313,7 +309,7 @@ void PanoramicCameraWorker::Triangulate(double *x, double *y, double *robot_angl
 		return
 			robot_angle
 			[x,y] position from angles MPR, RPG, GPB, BPM
-		M: magneta Led
+		M: magenta led
 		R: red led
 		G: green led
 		B: Blue led
@@ -461,34 +457,10 @@ void PanoramicCameraWorker::CirclesIntersection(double *x, double *y, double O1_
 }
 
 void PanoramicCameraWorker::PublishTopics() {
-	// pose from panoramic camera
-	// ros::Publisher pose_publisher;
-	// pose_publisher = node_handle_.advertise<geometry_msgs::PoseWithCovarianceStamped>(
-	// 	"localization/pose", queue_size);
-	// geometry_msgs::PoseWithCovarianceStamped pose_msg;
-	// pose_msg.header.frame_id = "panoramic_camera_link";
-	// pose_msg.pose.covariance = {0.0001, 0, 0,      0, 0,      0, 0, 0.0001, 0, 0,      0, 0,
-	// 							0,      0, 0.0001, 0, 0,      0, 0, 0,      0, 0.0001, 0, 0,
-	// 							0,      0, 0,      0, 0.0001, 0, 0, 0,      0, 0,      0, 0.0001};
-
-	// time
 	ros::Time time_stamp;
 	ros::Rate rate(tp_rate);
 
 	while (!stop_) {
-		// time update
-		// time_stamp = ros::Time::now();
-		//
-		// pose_msg.header.stamp = time_stamp;
-		// pose_msg.pose.pose.position.x = pose_.x;
-		// pose_msg.pose.pose.position.y = pose_.y;
-		// pose_msg.pose.pose.position.z = 0;
-		// pose_msg.pose.pose.orientation.x = 0;
-		// pose_msg.pose.pose.orientation.y = 0;
-		// pose_msg.pose.pose.orientation.z = pose_.yaw;
-		// pose_msg.pose.pose.orientation.w = 1;
-		// pose_publisher.publish(pose_msg);
-
 		rate.sleep();
 	}
 }
