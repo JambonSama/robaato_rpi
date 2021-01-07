@@ -69,13 +69,9 @@ const double cam_pano_rot_init = 4 * M_PI / 3;
 
 PanoramicCameraWorker::PanoramicCameraWorker(uint64_t index)
 	: CameraWorker(index) //
-{
-	std::cout << "pcw constructor" << std::endl;
-}
+{}
 
-PanoramicCameraWorker::~PanoramicCameraWorker() {
-	std::cout << "pcw destructor" << std::endl;
-}
+PanoramicCameraWorker::~PanoramicCameraWorker() {}
 
 void PanoramicCameraWorker::BroadcastTfs() {
 	// odometry topic and odometry to base link tf
@@ -101,7 +97,7 @@ void PanoramicCameraWorker::BroadcastTfs() {
 
 		double dt = (current_time - last_time).toSec();
 
-		mu_position_.lock();
+		mu_pose_.lock();
 		if (dt != 0) {
 			v_x = (pose_.x - x) / dt;
 			v_y = (pose_.y - y) / dt;
@@ -110,7 +106,7 @@ void PanoramicCameraWorker::BroadcastTfs() {
 		x = pose_.x;
 		y = pose_.y;
 		yaw = pose_.yaw;
-		mu_position_.unlock();
+		mu_pose_.unlock();
 
 		geometry_msgs::Quaternion odom_quat =
 			tf::createQuaternionMsgFromYaw(yaw); // because odometry is 6DOF
@@ -175,7 +171,7 @@ void PanoramicCameraWorker::ProcessFrame() {
 }
 
 void PanoramicCameraWorker::UpdatePoseFromFrame() {
-	// img
+	// container for polar frame
 	cv::Mat polar_frame;
 
 	// convert from BGR to HSV
@@ -245,10 +241,12 @@ void PanoramicCameraWorker::UpdatePoseFromFrame() {
 	double angle_dif_from_prev = abs(robot_angle - robot_angle_prev);
 
 	if (x < 0 || y < 0 || x > reachable_width || y > reachable_height) {
-		std::cout << "error position outsode arena x: " << x << "y: " << y << std::endl;
+		// std::cout << "error position outsode arena x: " << x << "y: " << y << std::endl;
+		;
 	} else if (dist_from_prev > 2) {
-		std::cout << "error too far from previous value x_prev: " << x << "y_prev: " << y
-				  << std::endl;
+		// std::cout << "error too far from previous value x_prev: " << x << "y_prev: " << y <<
+		// std::endl;
+		;
 	} else {
 
 		/*
@@ -265,25 +263,24 @@ void PanoramicCameraWorker::UpdatePoseFromFrame() {
 			robot_angle_sum += robot_angle;
 		} else{
 
-			mu_position_.lock();
+			mu_pose_.lock();
 			pose_.x = (x+x_sum)/(nb_data_mean+1);
 			pose_.y = (y+y_sum)/(nb_data_mean+1);
 			pose_.yaw = (robot_angle+robot_angle_data)/(nb_data_mean+1);
-			mu_position_.unlock();
+			mu_pose_.unlock();
 		}
-
 		*/
 
-		std::cout << "x " << x << std::endl;
-		std::cout << "y " << y << std::endl;
-		std::cout << "robot_angle " << robot_angle << std::endl;
+		// std::cout << "x " << x << std::endl;
+		// std::cout << "y " << y << std::endl;
+		// std::cout << "robot_angle " << robot_angle << std::endl;
 
 		// assign
-		mu_position_.lock();
+		mu_pose_.lock();
 		pose_.x = x;
 		pose_.y = y;
 		pose_.yaw = robot_angle;
-		mu_position_.unlock();
+		mu_pose_.unlock();
 
 		// update pevious values
 		x_prev = x;
@@ -395,13 +392,17 @@ void PanoramicCameraWorker::FindCircleOrigin(double *radius, double *orig_midway
 
 		if (sin(corner_midway_angle) != 0)
 			*radius = abs((0.5 * dist) / sin(corner_midway_angle));
-		else
-			std::cout << "sin angle error" << std::endl;
+		else {
+			// std::cout << "sin angle error" << std::endl;
+			;
+		}
 
 		if (tan(corner_midway_angle) != 0)
 			*orig_midway_dist = origin_dir * abs((0.5 * dist) / tan(corner_midway_angle));
-		else
-			std::cout << "tangent angle error" << std::endl;
+		else {
+			// std::cout << "tangent angle error" << std::endl;
+			;
+		}
 	}
 }
 
@@ -440,8 +441,9 @@ void PanoramicCameraWorker::CirclesIntersection(double *x, double *y, double O1_
 
 		y2 = (-d - sqrt(det)) / (2 * c);
 		x2 = a - b * y2;
-	} else
+	} else {
 		std::cout << "det negative" << std::endl;
+	}
 
 	// choose pair of coords which is further away from the corner (one pair almost on the corner
 	// and the other is inside the arena

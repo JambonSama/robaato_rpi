@@ -25,11 +25,11 @@
 using namespace std::chrono_literals;
 
 namespace {
-const size_t tof_sensor_number = 6;
+// const size_t tof_sensor_number = 6;
 
 // FM FR FL SR SL BM
-const std::string link_names[tof_sensor_number] = {"tof_fm", "tof_fr", "tof_fl",
-												   "tof_sr", "tof_sl", "tof_bm"};
+const std::string link_names[TOF_SENSOR_NUM] = {"tof_fm", "tof_fr", "tof_fl",
+												"tof_sr", "tof_sl", "tof_bm"};
 const std::string link_suffix = "_link";
 
 // robot dimensions
@@ -40,27 +40,26 @@ const double L = 0.31400 + 2 * 0.00850 + 0.0240;
 const double gear_reduction = 172;
 
 // motor command
-const double f = 8;
-geometry_msgs::Twist velocity_command;
+// geometry_msgs::Twist velocity_command;
 double motor_command_l = 0;
 double motor_command_r = 0;
 double omega_wheel_l = 0;
 double omega_wheel_r = 0;
 double v_lin = 0;
 double v_ang = 0;
-const double bl[TOF_SENSOR_NUM] = {-1 * f, -1 * f, 1 * f, -1 * f, 1 * f, 1 * f};
-const double br[TOF_SENSOR_NUM] = {-1 * f, 1 * f, -1 * f, 1 * f, -1 * f, 1 * f};
-double cbl = 0;
-double cbr = 0;
+// const double f = 8;
+// const double bl[TOF_SENSOR_NUM] = {-1 * f, -1 * f, 1 * f, -1 * f, 1 * f, 1 * f};
+// const double br[TOF_SENSOR_NUM] = {-1 * f, 1 * f, -1 * f, 1 * f, -1 * f, 1 * f};
+// double cbl = 0;
+// double cbr = 0;
 
 // range value min-max
-float min_range = 0.02; // 2 cm
-float max_range = 1.00; // 50 cm
+const float min_range = 0.02; // 2 cm
+const float max_range = 1.00; // 1 m
 
 // mutexes
-std::mutex mu_velocity_command;
-std::mutex mu_motor_command;
-std::mutex mu_omega_wheel;
+// std::mutex mu_velocity_command;
+std::mutex mu_motor;
 } // namespace
 
 SerialPortWorker::SerialPortWorker()
@@ -78,8 +77,8 @@ SerialPortWorker::~SerialPortWorker() {
 	}
 	std::cout << "spw destructor read/write serial port" << std::endl; /// temp
 
-	if (th_update_velocity_command_.joinable()) {
-		th_update_velocity_command_.join();
+	if (th_subscribe_to_topics_.joinable()) {
+		th_subscribe_to_topics_.join();
 	}
 	std::cout << "spw destructor get command" << std::endl; /// temp
 
@@ -145,34 +144,21 @@ void SerialPortWorker::DisplayControlCommand() {
 }
 
 void SerialPortWorker::DisplaySensorReadings() {
-	std::cout << "ax " << sensor_message_.imu[A_X] << std::endl
-			  << "ay " << sensor_message_.imu[A_Y] << std::endl
-			  << "az " << sensor_message_.imu[A_Z] << std::endl
-			  << "v roll " << sensor_message_.imu[V_ROLL] << std::endl
-			  << "v pitch " << sensor_message_.imu[V_PITCH] << std::endl
-			  << "v yaw " << sensor_message_.imu[V_YAW] << std::endl
-			  << "tof fm " << sensor_message_.tof_sensors[FM] << std::endl
-			  << "tof fr " << sensor_message_.tof_sensors[FR] << std::endl
-			  << "tof fl " << sensor_message_.tof_sensors[FL] << std::endl
-			  << "tof sr " << sensor_message_.tof_sensors[SR] << std::endl
-			  << "tof sl " << sensor_message_.tof_sensors[SL] << std::endl
-			  << "tof bm " << sensor_message_.tof_sensors[BM] << std::endl
-			  << "bottle sensor " << sensor_message_.bottle_sensor << std::endl
-			  << "roller encoder " << sensor_message_.roller_encoder_state << "\n"
-			  << std::endl;
-}
-
-void SerialPortWorker::WriteNullControlMessage() {
-	control_message_.gate_position = false;
-	mu_velocity_command.lock();
-	control_message_.left_wheel_direction = 0;
-	control_message_.right_wheel_direction = 0;
-	control_message_.left_wheel_speed = 0;
-	control_message_.right_wheel_speed = 0;
-	mu_velocity_command.unlock();
-	control_message_.roller_state = 0;
-
-	write(serial_port_, (char *)&control_message_, sizeof(control_message_));
+	std::cout // << "ax " << sensor_message_.imu[A_X] << std::endl
+			  // << "ay " << sensor_message_.imu[A_Y] << std::endl
+			  // << "az " << sensor_message_.imu[A_Z] << std::endl
+			  // << "v roll " << sensor_message_.imu[V_ROLL] << std::endl
+			  // << "v pitch " << sensor_message_.imu[V_PITCH] << std::endl
+			  // << "v yaw " << sensor_message_.imu[V_YAW] << std::endl
+		<< "tof fm " << sensor_message_.tof_sensors[FM] << std::endl
+		<< "tof fr " << sensor_message_.tof_sensors[FR] << std::endl
+		<< "tof fl " << sensor_message_.tof_sensors[FL] << std::endl
+		<< "tof sr " << sensor_message_.tof_sensors[SR] << std::endl
+		<< "tof sl " << sensor_message_.tof_sensors[SL] << std::endl
+		<< "tof bm " << sensor_message_.tof_sensors[BM] << std::endl
+		<< "bottle sensor " << sensor_message_.bottle_sensor << std::endl
+		<< "roller encoder " << sensor_message_.roller_encoder_state << "\n"
+		<< std::endl;
 }
 
 void SerialPortWorker::WriteControlMessage() {
@@ -210,19 +196,20 @@ void SerialPortWorker::WriteControlMessage() {
 	//		  << "rig buff " << cbr << "\n"
 	//		  << std::endl;
 
-	control_message_.gate_position = false;
-	mu_velocity_command.lock();
-	control_message_.left_wheel_direction = motor_command_l > 0;
-	control_message_.right_wheel_direction = motor_command_r > 0;
-	control_message_.left_wheel_speed = std::fabs(motor_command_l);
-	control_message_.right_wheel_speed = std::fabs(motor_command_r);
-	mu_velocity_command.unlock();
-	control_message_.roller_state = 0;
+	// control_message_.gate_position = false;
+	// mu_velocity_command.lock();
+	// control_message_.left_wheel_direction = motor_command_l > 0;
+	// control_message_.right_wheel_direction = motor_command_r > 0;
+	// control_message_.left_wheel_speed = std::fabs(motor_command_l);
+	// control_message_.right_wheel_speed = std::fabs(motor_command_r);
+	// mu_velocity_command.unlock();
+	// control_message_.roller_state = 0;
 
 	write(serial_port_, (char *)&control_message_, sizeof(control_message_));
 }
 
 void SerialPortWorker::ReadSensorMessage() {
+	static bool rising_edge = false;
 	int num_bytes = read(serial_port_, (char *)&sensor_message_, sizeof(sensor_message_));
 
 	// check for error (n negative)
@@ -230,47 +217,61 @@ void SerialPortWorker::ReadSensorMessage() {
 		std::cout << "ò_ó reading serial port\n";
 		return;
 	}
+
+	if (sensor_message_.bottle_sensor && !rising_edge) {
+		++bottle_number_;
+		rising_edge = true;
+	}
+	if (!sensor_message_.bottle_sensor && rising_edge) {
+		rising_edge = false;
+	}
 }
 
-void SerialPortWorker::UpdateVelocityCommand() {
-	ros::Subscriber command_suscriber =
+void SerialPortWorker::SubscribeToTopics() {
+	ros::Subscriber command_subscriber =
 		node_handle_.subscribe("cmd_vel", queue_size, VelocityCmdCallback);
 	ros::Rate rate(tp_rate); // rate in [Hz]
+
 	while (!stop_) {
 		ros::spinOnce();
+
+		mu_motor.lock();
+		control_message_.left_wheel_direction = motor_command_l > 0;
+		control_message_.right_wheel_direction = motor_command_r > 0;
+		control_message_.left_wheel_speed = std::fabs(motor_command_l);
+		control_message_.right_wheel_speed = std::fabs(motor_command_r);
+		mu_motor.unlock();
+
 		rate.sleep();
 	}
 }
 
 void SerialPortWorker::ReadWriteSerialPort() {
-
 	ros::Time start_time = ros::Time::now();
 	ros::Time current_time = start_time;
 
-	while ((current_time - start_time).toSec() < 20) {
+	while ((current_time - start_time).toSec() < ready_time) {
+		// timing
 		current_time = ros::Time::now();
+
 		// write to serial port
-		this->WriteNullControlMessage();
+		this->SetNullControlMessage();
+		this->WriteControlMessage();
 
 		// read from serial port
 		this->ReadSensorMessage();
 	}
 	while (!stop_) {
-
 		// write to serial port
 		this->WriteControlMessage();
 
 		// read from serial port
-		this->ReadSensorMessage();
-
-		// sensor cout display (for debug)
-		// this->DisplayControlCommand();
 		// this->DisplaySensorReadings();
+		this->ReadSensorMessage();
 	}
 
-	// write to serial port to stop motors
-	this->WriteNullControlMessage();
-
+	// this->SetNullControlMessage();
+	// this->WriteControlMessage();
 	close(serial_port_);
 
 	std::cout << "spw: asked for motor stop" << std::endl;
@@ -280,9 +281,9 @@ void SerialPortWorker::Start() {
 	this->ConfigureSerialPort();
 
 	th_read_write_serial_port_ = std::thread(&SerialPortWorker::ReadWriteSerialPort, this);
-	th_update_velocity_command_ = std::thread(&SerialPortWorker::UpdateVelocityCommand, this);
 	th_broadcast_tfs_ = std::thread(&SerialPortWorker::BroadcastTfs, this);
 	th_publish_topics_ = std::thread(&SerialPortWorker::PublishTopics, this);
+	th_subscribe_to_topics_ = std::thread(&SerialPortWorker::SubscribeToTopics, this);
 }
 
 void SerialPortWorker::BroadcastTfs() {
@@ -297,8 +298,6 @@ void SerialPortWorker::BroadcastTfs() {
 	robot_state_publisher::RobotStatePublisher base_link2robot_tf_bc(
 		base_link2robot_tf); // (base_link -> robot) broadcaster
 
-	ros::Time current_time = ros::Time::now();
-	ros::Time last_time = ros::Time::now();
 	ros::Rate rate(tf_rate);
 
 	while (!stop_) {
@@ -311,10 +310,10 @@ void SerialPortWorker::BroadcastTfs() {
 
 void SerialPortWorker::PublishTopics() {
 	// tof (FM FR FL SR SL BM)
-	ros::Publisher tof_publisher[tof_sensor_number];
-	sensor_msgs::Range tof_msg[tof_sensor_number];
+	ros::Publisher tof_publisher[TOF_SENSOR_NUM];
+	sensor_msgs::Range tof_msg[TOF_SENSOR_NUM];
 
-	for (uint8_t i = 0; i < tof_sensor_number; ++i) {
+	for (uint8_t i = 0; i < TOF_SENSOR_NUM; ++i) {
 		tof_publisher[i] = node_handle_.advertise<sensor_msgs::Range>(link_names[i], queue_size);
 		tof_msg[i].header.frame_id = link_names[i] + link_suffix;
 		tof_msg[i].radiation_type = sensor_msgs::Range::ULTRASOUND;
@@ -342,21 +341,50 @@ void SerialPortWorker::PublishTopics() {
 	}
 }
 
-void VelocityCmdCallback(const geometry_msgs::Twist::ConstPtr &cmd_vel) {
-	mu_velocity_command.lock();
-	velocity_command = *cmd_vel;
-	mu_velocity_command.unlock();
+uint32_t SerialPortWorker::GetBottleNumber() {
+	return bottle_number_;
+}
 
-	v_lin = velocity_command.linear.x;  // SI [m/s]
-	v_ang = velocity_command.angular.z; // SI [rad/s]
+bool SerialPortWorker::GetRollerEncoderState() {
+	return sensor_message_.roller_encoder_state;
+}
 
-	mu_omega_wheel.lock();
+void SerialPortWorker::SetNullControlMessage() {
+	control_message_.gate_position = false;
+	mu_motor.lock();
+	control_message_.left_wheel_direction = 0;
+	control_message_.right_wheel_direction = 0;
+	control_message_.left_wheel_speed = 0;
+	control_message_.right_wheel_speed = 0;
+	mu_motor.unlock();
+	control_message_.roller_state = 0;
+}
+
+void SerialPortWorker::SetBottleNumber(uint32_t bottle_number) {
+	bottle_number_ = bottle_number;
+}
+
+void SerialPortWorker::SetGatePosition(bool gate_position) {
+	control_message_.gate_position = gate_position;
+}
+
+void SerialPortWorker::SetRollerState(uint8_t roller_state) {
+	control_message_.roller_state = roller_state;
+}
+
+void VelocityCmdCallback(const geometry_msgs::Twist::ConstPtr &vel_cmd) {
+	// mu_velocity_command.lock();
+	// velocity_command = *vel_cmd;
+	// mu_velocity_command.unlock();
+
+	v_lin = vel_cmd->linear.x;  // SI [m/s]
+	v_ang = vel_cmd->angular.z; // SI [rad/s]
+
+	mu_motor.lock();
 	omega_wheel_l = (2 * v_lin - v_ang * L) / (2 * R); // SI [rad/s]
 	omega_wheel_r = (2 * v_lin + v_ang * L) / (2 * R); // SI [rad/s]
-	mu_omega_wheel.unlock();
 
-	mu_motor_command.lock();
 	motor_command_l = omega_wheel_l * 30 / M_PI * gear_reduction; // rpm
 	motor_command_r = omega_wheel_r * 30 / M_PI * gear_reduction; // rpm
-	mu_motor_command.unlock();
+	mu_motor.unlock();
 }

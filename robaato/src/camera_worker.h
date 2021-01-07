@@ -34,16 +34,14 @@ protected:
 	void GrabFrame();
 	// processes the frame from retrieval to info extraction
 	virtual void ProcessFrame() = 0;
-	// publishes necessary topics
-	virtual void PublishTopics() = 0;
+	
 	virtual void BroadcastTfs() = 0;
+	virtual void PublishTopics() = 0;
 
 public:
 	// constructs the camera worker from the index of the camera on the device
 	// see v4l2-ctl --list-devices
 	CameraWorker(uint64_t index);
-	// destructs the camera worker
 	virtual ~CameraWorker();
-	// starts the camera worker
 	void Start();
 };

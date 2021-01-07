@@ -13,10 +13,10 @@ struct Pose {
 	double yaw = 0;
 };
 
-struct Position {
-	double x = 0;
-	double y = 0;
-};
+// struct Position {
+// 	double x = 0;
+// 	double y = 0;
+// };
 
 class PanoramicCameraWorker : public CameraWorker {
 protected:
@@ -25,13 +25,11 @@ protected:
 	ros::NodeHandle node_handle_;
 
 	// MUTEX CLASS MEMBERS
-	std::mutex mu_position_; // mutex to access the robot position
+	std::mutex mu_pose_; // mutex to access the robot position
 
 	// CLASS METHODS
 	// processes the frame from retrieval to robot position
 	void ProcessFrame() override;
-	void BroadcastTfs();
-	void PublishTopics();
 	// triangulates position from LED angles [rad]
 	void Triangulate(double *x, double *y, double *robot_angle, double MPR, double RPG, double GPB,
 					 double BPM, double m_angle);
@@ -47,10 +45,12 @@ protected:
 	// updates the robot position from the frame
 	void UpdatePoseFromFrame();
 
+	void BroadcastTfs();
+	void PublishTopics();
+
 public:
 	// constructs the camera worker from the index of the camera on the device
 	// see v4l2-ctl --list-devices
 	PanoramicCameraWorker(uint64_t index);
-	// destructs the camera worker
 	virtual ~PanoramicCameraWorker();
 };

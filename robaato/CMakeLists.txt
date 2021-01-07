@@ -130,6 +130,8 @@ add_executable(
     src/message.h
     src/panoramic_camera_worker.h
     src/panoramic_camera_worker.cpp
+    src/robot_worker.h
+    src/robot_worker.cpp
     src/serial_port_worker.h
     src/serial_port_worker.cpp)
 
