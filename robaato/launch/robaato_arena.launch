@@ -1,7 +1,6 @@
 <launch>
 
   <node pkg="robaato" type="robaato" name="robaato_publishing" output="screen">
-    <!--param name="transform_configuration_param" value="param_value"/-->
   </node>
 
 </launch>

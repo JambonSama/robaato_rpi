@@ -3,7 +3,7 @@
 #include <iostream>
 
 // ROS headers
-#include <move_base_msgs/MoveBaseAction.h>
+#include <actionlib_msgs/GoalID.h>
 #include <ros/ros.h>
 #include <tf/transform_broadcaster.h>
 
@@ -28,6 +28,9 @@ bool is_home = false;
 
 // navigation
 const uint32_t nav_goal_queue_size = 20;
+uint64_t current_goal_index = 0;
+const Pose nav_goals[3] = {{4., 1., 0.}, {4., 4., 1.57}, {1., 4., 3.14}};
+bool nav_goal_publish = true;
 } // namespace
 
 RobotWorker::RobotWorker()
@@ -37,8 +40,10 @@ RobotWorker::RobotWorker()
 	  rpi_cam_(new PanoramicCameraWorker(0)), //
 	  serial_port_(new SerialPortWorker())    //
 {
-	home_goal_publisher_ =
+	nav_goal_publisher_ =
 		node_handle_.advertise<move_base_msgs::MoveBaseActionGoal>("move_base/goal", queue_size);
+	goal_id_publisher_ =
+		node_handle_.advertise<actionlib_msgs::GoalID>("move_base/cancel", queue_size);
 
 	std::cout << "constructor\n" << std::endl;
 }
@@ -123,7 +128,12 @@ void RobotWorker::Navigate() {
 	while (robot_ == Robot::RUNNING) {
 		switch (navigation_) {
 		case Nav::OUTBOUND:
-			/// TODO send control
+			if (nav_goal_publish) {
+				move_base_msgs::MoveBaseActionGoal current_goal =
+					Pose2Goal(nav_goals[current_goal_index], "nav_goal_id");
+				nav_goal_publisher_.publish(current_goal);
+				nav_goal_publish = false;
+			}
 			if ((current_time - initial_time).toSec() > inbound_time) {
 				this->Home();
 				navigation_ = Nav::INBOUND;
@@ -151,6 +161,7 @@ void RobotWorker::Navigate() {
 				serial_port_->SetBottleNumber(0);
 				is_home = false;
 				navigation_ = Nav::OUTBOUND;
+				nav_goal_publish = true;
 			}
 			break;
 		}
@@ -278,26 +289,16 @@ void RobotWorker::PrintRolle() {
 void RobotWorker::Home() {
 	std::cout << "trying to home" << std::endl;
 
-	move_base_msgs::MoveBaseActionGoal home_goal_msg;
+	actionlib_msgs::GoalID goal_id_msg;
+	goal_id_msg.stamp = ros::Time::now();
+	goal_id_msg.id = "nav_goal_id";
 
-	ros::Time time = ros::Time::now();
+	goal_id_publisher_.publish(goal_id_msg);
 
-	home_goal_msg.header.stamp = time;
-	home_goal_msg.goal_id.stamp = time;
-	home_goal_msg.goal_id.id = "home_goal_id";
-	home_goal_msg.goal.target_pose.header.stamp = time;
-	home_goal_msg.goal.target_pose.header.frame_id = "map";
-	home_goal_msg.goal.target_pose.pose.position.x = 0.5;
-	home_goal_msg.goal.target_pose.pose.position.y = 0.5;
-	home_goal_msg.goal.target_pose.pose.position.z = 0.0;
-	geometry_msgs::Quaternion home_goal_quat = tf::createQuaternionMsgFromYaw(0.7853981633974483);
-	home_goal_msg.goal.target_pose.pose.orientation = home_goal_quat;
-	// home_goal_msg.goal.target_pose.pose.orientation.x = 0.0;
-	// home_goal_msg.goal.target_pose.pose.orientation.y = 0.0;
-	// home_goal_msg.goal.target_pose.pose.orientation.z = 0.7853981633974483;
-	// home_goal_msg.goal.target_pose.pose.orientation.w = 1.0;
+	move_base_msgs::MoveBaseActionGoal home_goal_msg =
+		Pose2Goal({0.5, 0.5, 0.7853981633974483}, "home_goal_id");
 
-	home_goal_publisher_.publish(home_goal_msg);
+	nav_goal_publisher_.publish(home_goal_msg);
 }
 
 void RobotWorker::PublishTopics() {}
@@ -323,5 +324,30 @@ void NavStatusCallback(const actionlib_msgs::GoalStatusArray::ConstPtr &goal_sta
 				std::cout << "reached home" << std::endl;
 			}
 		}
+		if (goal_status->status_list[i].goal_id.id == "nav_goal_id") {
+			if (goal_status->status_list[i].status == actionlib_msgs::GoalStatus::SUCCEEDED) {
+				++current_goal_index;
+				nav_goal_publish = true;
+			}
+		}
 	}
+}
+
+move_base_msgs::MoveBaseActionGoal Pose2Goal(Pose pose, std::string id) {
+	move_base_msgs::MoveBaseActionGoal goal_msg;
+
+	ros::Time time = ros::Time::now();
+
+	geometry_msgs::Quaternion goal_quat = tf::createQuaternionMsgFromYaw(pose.yaw);
+	goal_msg.header.stamp = time;
+	goal_msg.goal_id.stamp = time;
+	goal_msg.goal_id.id = id;
+	goal_msg.goal.target_pose.header.stamp = time;
+	goal_msg.goal.target_pose.header.frame_id = "map";
+	goal_msg.goal.target_pose.pose.position.x = pose.x;
+	goal_msg.goal.target_pose.pose.position.y = pose.y;
+	goal_msg.goal.target_pose.pose.position.z = 0.0;
+	goal_msg.goal.target_pose.pose.orientation = goal_quat;
+
+	return goal_msg;
 }

@@ -5,6 +5,7 @@
 
 // ROS headers
 #include <actionlib_msgs/GoalStatusArray.h>
+#include <move_base_msgs/MoveBaseAction.h>
 
 // project headers
 #include "panoramic_camera_worker.h"
@@ -25,7 +26,8 @@ private:
 	SerialPortWorker *serial_port_;
 
 	ros::NodeHandle node_handle_;
-	ros::Publisher home_goal_publisher_;
+	ros::Publisher nav_goal_publisher_;
+	ros::Publisher goal_id_publisher_;
 
 	// THREAD CLASS MEMBERS
 	std::thread th_operate_;
@@ -56,3 +58,5 @@ public:
 };
 
 void NavStatusCallback(const actionlib_msgs::GoalStatusArray::ConstPtr &goal_status);
+
+move_base_msgs::MoveBaseActionGoal Pose2Goal(Pose pose, std::string id);

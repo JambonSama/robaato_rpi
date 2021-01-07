@@ -204,6 +204,8 @@ void SerialPortWorker::WriteControlMessage() {
 	// control_message_.right_wheel_speed = std::fabs(motor_command_r);
 	// mu_velocity_command.unlock();
 	// control_message_.roller_state = 0;
+	std::cout << "left_motor: " << motor_command_l << "\n";
+	std::cout << "right_motor: " << motor_command_r << "\n";
 
 	write(serial_port_, (char *)&control_message_, sizeof(control_message_));
 }
