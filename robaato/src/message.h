@@ -15,6 +15,7 @@ struct __attribute__((__packed__)) ControlMessage {
 	float left_wheel_speed = 0;        //[rpm] range:0-3000
 	float right_wheel_speed = 0;       //[rpm] range:0-3000
 	uint8_t roller_state = 0;          //(=0: OFF) (=1: FORWARD) (=2: BACKWARD)
+	bool braitenberg = false;           //(=0 not active) (=1: active)
 };
 
 struct __attribute__((__packed__)) SensorMessage {

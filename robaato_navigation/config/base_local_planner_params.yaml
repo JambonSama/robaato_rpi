@@ -1,5 +1,3 @@
-controller_frequency: 10
-
 TrajectoryPlannerROS:
   # Robot Configuration Parameters
   acc_lim_x: 0.04
@@ -12,17 +10,17 @@ TrajectoryPlannerROS:
   min_vel_theta: -0.08
   min_in_place_vel_theta: 0.08
 
-  escape_vel: -0.05
+  escape_vel: -0.04
 
   holonomic_robot: false
 
   # Forward Simulation Parameters
-  sim_time: 1.0 #The amount of time to forward-simulate trajectories in seconds (default: 1.0)
-  sim_granularity: 0.025 #The step size, in meters, to take between points on a given trajectory (default:0.025)
+  sim_time: 3.0 #The amount of time to forward-simulate trajectories in seconds (default: 1.0)
+  sim_granularity: 0.1 #The step size, in meters, to take between points on a given trajectory (default:0.025)
   angular_sim_granularity: 0.025 #The step size, in radians, to take between angular samples on a given trajectory
-  vx_samples: 10 #The number of samples to use when exploring the x velocity space (default: 3)
-  vtheta_samples: 20 #The number of samples to use when exploring the theta velocity space (default: 20)
-  controller_frequency: 20.0 #The frequency at which this controller will be called in Hz. Uses searchParam to read the parameter from parent namespaces if not set in the namespace of the controller. For use with move_base, this means that you only need to set its "controller_frequency" parameter and can safely leave this one unset. (default:20.0)
+  vx_samples: 20 #The number of samples to use when exploring the x velocity space (default: 3)
+  vtheta_samples: 40 #The number of samples to use when exploring the theta velocity space (default: 20)
+  controller_frequency: 5.0 #The frequency at which this controller will be called in Hz. Uses searchParam to read the parameter from parent namespaces if not set in the namespace of the controller. For use with move_base, this means that you only need to set its "controller_frequency" parameter and can safely leave this one unset. (default:20.0)
   
   # Goal Tolerance Parameters
   yaw_goal_tolerance: 4.0 #=20deg  #0.15 # = 10 deg
@@ -35,8 +33,8 @@ TrajectoryPlannerROS:
   #Trajectory Scoring Parameters
   meter_scoring: true #Whether the gdist_scale and pdist_scale parameters should assume that goal_distance and path_distance are expressed in units of meters or cells. Cells are assumed by default.
   path_distance_bias: 1.0 #WORKING:2 #0.01 #The weighting for how much the controller should stay close to the path it was given, maximal possible value is 5.0
-  goal_distance_bias: 2.0 #4.0 #The weighting for how much the controller should attempt to reach its local goal, also controls speed, maximal possible value is 5.0
-  occdist_scale: 2.0 #0.0 #The weighting for how much the controller should attempt to avoid obstacles
+  goal_distance_bias: 4.0 #4.0 #The weighting for how much the controller should attempt to reach its local goal, also controls speed, maximal possible value is 5.0
+  occdist_scale: 100.0 #0.0 #The weighting for how much the controller should attempt to avoid obstacles
 
   dwa: true
 

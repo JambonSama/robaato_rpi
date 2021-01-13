@@ -240,7 +240,7 @@ void PanoramicCameraWorker::UpdatePoseFromFrame() {
 
 	Triangulate(&x, &y, &robot_angle, angle_MPR, angle_RPG, angle_GPB, angle_BPM, m_angle);
 
-	static double x_prev = 4, y_prev = 4, robot_angle_prev = 0;
+	static double x_prev = 1, y_prev = 1, robot_angle_prev = 0;
 	double dist_from_prev = sqrt((x - x_prev) * (x - x_prev) + (y - y_prev) * (y - y_prev));
 	double angle_dif_from_prev = abs(robot_angle - robot_angle_prev);
 

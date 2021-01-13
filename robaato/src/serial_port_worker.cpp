@@ -56,6 +56,7 @@ double cbr = 0;
 // range value min-max
 float min_range = 0.02; // 2 cm
 float max_range = 1.00; // 50 cm
+const double release_time = 510.;
 
 // mutexes
 std::mutex mu_velocity_command;
@@ -64,8 +65,9 @@ std::mutex mu_omega_wheel;
 } // namespace
 
 SerialPortWorker::SerialPortWorker()
-	: serial_port_(open("/dev/ttyACM0", O_RDWR)) // open the serial port (currently set to an
-												 // standard FTDI USB-UART cable type device)
+	: serial_port_(open("/dev/ttyACM0", O_RDWR)), // open the serial port (currently set to an
+												  // standard FTDI USB-UART cable type device)
+	  initial_time_(ros::Time::now())             //
 {}
 
 SerialPortWorker::~SerialPortWorker() {
@@ -164,6 +166,7 @@ void SerialPortWorker::DisplaySensorReadings() {
 
 void SerialPortWorker::WriteNullControlMessage() {
 	control_message_.gate_position = false;
+	control_message_.braitenberg = true;
 	mu_velocity_command.lock();
 	control_message_.left_wheel_direction = 0;
 	control_message_.right_wheel_direction = 0;
@@ -176,48 +179,25 @@ void SerialPortWorker::WriteNullControlMessage() {
 }
 
 void SerialPortWorker::WriteControlMessage() {
+	ros::Time current_time = ros::Time::now();
 
-	// if (sensor_message_.tof_sensors[0] < max_range || sensor_message_.tof_sensors[1] < max_range
-	// || 	sensor_message_.tof_sensors[2] < max_range || sensor_message_.tof_sensors[3] < max_range
-	// ||
-	//	sensor_message_.tof_sensors[4] < max_range || sensor_message_.tof_sensors[5] < max_range) {
+	double sw_dt = (current_time - initial_time_).toSec();
 
-	//	std::cout << "NOT RESET\n" << std::endl;
-	//	//this->DisplaySensorReadings();
-	//	for (size_t i = 0; i < TOF_SENSOR_NUM; ++i) {
-	//		if (sensor_message_.tof_sensors[i] != 0) {
-	//			cbl += bl[i] / sensor_message_.tof_sensors[i];
-	//			cbr += br[i] / sensor_message_.tof_sensors[i];
-	//		}
-	//	}
-	//} else {
-	//	std::cout << "RESET\n" << std::endl;
-	//	//this->DisplaySensorReadings();
-	//	cbl = 0;
-	//	cbr = 0;
-	//	// motor_command_l = 0;
-	//	// motor_command_r = 0;
-	//}
+	if (sw_dt > release_time) {
+		control_message_.gate_position = true;
+		control_message_.roller_state = 2;
 
-	// motor_command_l += cbl;
-	// motor_command_r += cbr;
-	// motor_command_l = std::clamp(motor_command_l, -3000., 3000.);
-	// motor_command_r = std::clamp(motor_command_r, -3000., 3000.);
-
-	// std::cout << "lcm " << motor_command_l << std::endl
-	//		  << "rmc " << motor_command_r << std::endl
-	//		  << "lef buff " << cbl << std::endl
-	//		  << "rig buff " << cbr << "\n"
-	//		  << std::endl;
-
-	control_message_.gate_position = false;
+	} else {
+		control_message_.gate_position = false;
+		control_message_.roller_state = 1;
+	}
+	control_message_.braitenberg = true;
 	mu_velocity_command.lock();
 	control_message_.left_wheel_direction = motor_command_l > 0;
 	control_message_.right_wheel_direction = motor_command_r > 0;
 	control_message_.left_wheel_speed = std::fabs(motor_command_l);
 	control_message_.right_wheel_speed = std::fabs(motor_command_r);
 	mu_velocity_command.unlock();
-	control_message_.roller_state = 0;
 
 	write(serial_port_, (char *)&control_message_, sizeof(control_message_));
 }

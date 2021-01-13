@@ -16,6 +16,7 @@ protected:
 	// BASE CLASS MEMBERS
 	bool stop_ = false;
 	int serial_port_;
+	ros::Time initial_time_;
 
 	SensorMessage sensor_message_;
 	ControlMessage control_message_;
